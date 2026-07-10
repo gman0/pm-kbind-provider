@@ -33,5 +33,5 @@ spec:
       matches:
         - path:
             type: PathPrefix
-            value: {{ .Values.httpRoute.pathPrefix | default "/kube-bind" }}
+            value: {{ .Values.httpRoute.pathPrefix | default "/kbind" }}
 {{- end }}

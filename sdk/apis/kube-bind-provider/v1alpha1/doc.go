@@ -14,11 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package provider
-
-import (
-	"embed"
-)
-
-//go:embed apiexport-kube-bind-provider.platform-mesh.io.yaml apiresourceschema-kbindclusters.kube-bind-provider.platform-mesh.io.yaml contentconfiguration.yaml providermetadata.yaml rbac.yaml
-var FS embed.FS
+// Package v1alpha1 contains the provider-side kbind API types.
+//
+// +kubebuilder:object:generate=true
+// +groupName=kube-bind-provider.platform-mesh.io
+package v1alpha1

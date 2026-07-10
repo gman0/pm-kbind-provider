@@ -1,5 +1,7 @@
+//go:build tools
+
 /*
-Copyright 2026 The Platform Mesh Authors.
+Copyright 2022 The Kube Bind Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,11 +16,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package provider
+package tools
 
 import (
-	"embed"
+	_ "k8s.io/code-generator"
 )
-
-//go:embed apiexport-kube-bind-provider.platform-mesh.io.yaml apiresourceschema-kbindclusters.kube-bind-provider.platform-mesh.io.yaml contentconfiguration.yaml providermetadata.yaml rbac.yaml
-var FS embed.FS
