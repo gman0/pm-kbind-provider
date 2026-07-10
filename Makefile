@@ -22,7 +22,7 @@ GOMOD = $(GOCMD) mod
 GOFMT = $(GOCMD) fmt
 
 # Binary names
-INIT_BINARY_NAME = init
+MANAGER_BINARY_NAME = manager
 
 # Build directory
 BUILD_DIR = bin
@@ -31,12 +31,12 @@ BUILD_DIR = bin
 IMAGE_REGISTRY ?= ghcr.io/platform-mesh
 IMAGE_TAG ?= dev
 
-# Init image
-INIT_IMAGE_NAME ?= kube-bind-provider-init
-INIT_IMAGE ?= $(IMAGE_REGISTRY)/$(INIT_IMAGE_NAME):$(IMAGE_TAG)
+# Manager image
+MANAGER_IMAGE_NAME ?= kbind-provider-manager
+MANAGER_IMAGE ?= $(IMAGE_REGISTRY)/$(MANAGER_IMAGE_NAME):$(IMAGE_TAG)
 
 # Portal image
-PORTAL_IMAGE_NAME ?= kube-bind-provider-portal
+PORTAL_IMAGE_NAME ?= kbind-provider-portal
 PORTAL_IMAGE ?= $(IMAGE_REGISTRY)/$(PORTAL_IMAGE_NAME):$(IMAGE_TAG)
 PORTAL_PORT ?= 4300
 
@@ -45,12 +45,12 @@ all: build
 
 ## build: Build all binaries
 .PHONY: build
-build: build-init
+build: build-manager
 
-## build-init: Build the init/bootstrap binary
-.PHONY: build-init
-build-init: fmt vet
-	$(GOBUILD) -o $(BUILD_DIR)/$(INIT_BINARY_NAME) ./cmd/init/...
+## build-manager: Build the manager binary
+.PHONY: build-manager
+build-manager: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(MANAGER_BINARY_NAME) ./cmd/manager/...
 
 ## fmt: Run go fmt
 .PHONY: fmt
@@ -67,15 +67,15 @@ vet:
 tidy:
 	$(GOMOD) tidy
 
-## init-image-build: Build init container image locally
-.PHONY: init-image-build
-init-image-build:
-	docker build -t $(INIT_IMAGE) -f deploy/Dockerfile .
+## manager-image-build: Build manager container image locally
+.PHONY: manager-image-build
+manager-image-build:
+	docker build -t $(MANAGER_IMAGE) -f deploy/Dockerfile .
 
-## init-image-push: Push init container image to registry
-.PHONY: init-image-push
-init-image-push: init-image-build
-	docker push $(INIT_IMAGE)
+## manager-image-push: Push manager container image to registry
+.PHONY: manager-image-push
+manager-image-push: manager-image-build
+	docker push $(MANAGER_IMAGE)
 
 ## portal-image-build: Build portal container image locally
 .PHONY: portal-image-build
@@ -89,19 +89,19 @@ portal-image-push: portal-image-build
 
 ## images: Build all container images
 .PHONY: images
-images: init-image-build portal-image-build
+images: manager-image-build portal-image-build
 
 ## images-push: Push all container images
 .PHONY: images-push
-images-push: init-image-push portal-image-push
+images-push: manager-image-push portal-image-push
 
 # Kind cluster parameters
 KIND_CLUSTER ?= platform-mesh
 
-## kind-load-init: Load init image into kind cluster
-.PHONY: kind-load-init
-kind-load-init:
-	kind load docker-image $(INIT_IMAGE) --name $(KIND_CLUSTER)
+## kind-load-manager: Load manager image into kind cluster
+.PHONY: kind-load-manager
+kind-load-manager:
+	kind load docker-image $(MANAGER_IMAGE) --name $(KIND_CLUSTER)
 
 ## kind-load-portal: Load portal image into kind cluster
 .PHONY: kind-load-portal
@@ -110,7 +110,7 @@ kind-load-portal:
 
 ## kind-load-all: Load all images into kind cluster
 .PHONY: kind-load-all
-kind-load-all: kind-load-init kind-load-portal
+kind-load-all: kind-load-manager kind-load-portal
 
 ## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
 .PHONY: portal-run
@@ -120,19 +120,19 @@ portal-run:
 ## portal-run-detached: Run portal container in background
 .PHONY: portal-run-detached
 portal-run-detached:
-	docker run -d --rm --name kube-bind-portal -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
+	docker run -d --rm --name kbind-portal -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
 	@echo "Portal running at http://localhost:$(PORTAL_PORT)"
-	@echo "Stop with: docker stop kube-bind-portal"
+	@echo "Stop with: docker stop kbind-portal"
 
 ## portal-stop: Stop the portal container
 .PHONY: portal-stop
 portal-stop:
-	docker stop kube-bind-portal
+	docker stop kbind-portal
 
 ## helm-deps: Update Helm chart dependencies
 .PHONY: helm-deps
 helm-deps:
-	helm dependency update deploy/helm/kube-bind-portal
+	helm dependency update deploy/helm/kbind-portal
 
 # OCM / Helm publishing parameters
 OCM ?= ocm
@@ -140,10 +140,10 @@ HELM ?= helm
 OCM_REPO ?= ghcr.io/platform-mesh
 OCM_CTF ?= .ocm/transport.ctf
 # Component name (must match constructor/component-constructor.yaml).
-OCM_COMPONENT ?= github.com/platform-mesh/kube-bind-provider
+OCM_COMPONENT ?= github.com/platform-mesh/kbind-provider
 # Charts are published under this repo's own GHCR namespace (self-contained, alongside
 # the container images) rather than the shared helm-charts registry.
-HELM_REPO ?= ghcr.io/platform-mesh/kube-bind-provider/charts
+HELM_REPO ?= ghcr.io/platform-mesh/kbind-provider/charts
 VERSION ?= 0.0.0-dev
 CHART_VERSION ?= $(VERSION)
 IMAGE_VERSION ?= $(VERSION)
@@ -157,7 +157,7 @@ BACKEND_CHART_VERSION ?= 0.0.0-9aa7dc83de93180718abbb7e548161a003b8999a
 BACKEND_IMAGE_TAG ?= 0.0.0-6ac88b0f68dc5247c773dd6c3b3a0f44a64e9b1b
 # Charts this repo owns. The OCM component embeds them (input: helm) and publishes them as
 # OCI artifacts on `ocm-push`; `helm-push` is the standalone (non-OCM) publish path.
-HELM_CHARTS ?= kube-bind-portal
+HELM_CHARTS ?= kbind-portal
 
 ## ocm-build: Build OCM component archive (CTF) from constructor/component-constructor.yaml
 # NOTE: the component references our portal chart as a published OCI artifact, so run

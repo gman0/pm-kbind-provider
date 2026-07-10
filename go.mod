@@ -9,8 +9,6 @@ replace (
 	github.com/kcp-dev/sdk => github.com/kcp-dev/sdk v0.31.1
 )
 
-replace github.com/kube-bind/kube-bind/contrib/kcp => github.com/kube-bind/kube-bind/contrib/kcp v0.0.0-20260528120500-beb7d578018a
-
 replace (
 	k8s.io/api => github.com/kcp-dev/kubernetes/staging/src/k8s.io/api v0.0.0-20260430062835-b63495f6b15b
 	k8s.io/apiextensions-apiserver => github.com/kcp-dev/kubernetes/staging/src/k8s.io/apiextensions-apiserver v0.0.0-20260430062835-b63495f6b15b
@@ -49,7 +47,7 @@ replace (
 require (
 	github.com/kcp-dev/kcp v0.31.1
 	github.com/kcp-dev/logicalcluster/v3 v3.0.5
-	github.com/kube-bind/kube-bind/contrib/kcp v0.0.0-00010101000000-000000000000
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	k8s.io/api v0.36.1
 	k8s.io/apimachinery v0.36.1
@@ -114,7 +112,6 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.etcd.io/etcd/api/v3 v3.6.10 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.6.10 // indirect
