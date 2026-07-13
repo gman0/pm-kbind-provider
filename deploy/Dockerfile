@@ -15,17 +15,17 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the init binary
+# Build the operator binary
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -ldflags="-s -w -X main.version=${VERSION} -X main.gitCommit=${GIT_COMMIT} -X main.buildDate=${BUILD_DATE}" \
-    -o init ./cmd/init/...
+    -o operator ./cmd/operator/...
 
 FROM gcr.io/distroless/static:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39
 
 WORKDIR /
 
-COPY --from=builder /workspace/init /init
+COPY --from=builder /workspace/operator /operator
 
 USER 65532:65532
 
-ENTRYPOINT ["/init"]
+ENTRYPOINT ["/operator"]

@@ -40,7 +40,7 @@ import (
 	"github.com/platform-mesh/kube-bind-provider/internal/controller"
 )
 
-type managerOptions struct {
+type operatorOptions struct {
 	kcpKubeconfig string
 	endpointSlice string
 }
@@ -51,10 +51,10 @@ func main() {
 
 	ctrl.SetLogger(zap.New())
 
-	opts := &managerOptions{}
+	opts := &operatorOptions{}
 
 	root := &cobra.Command{
-		Use:   "manager",
+		Use:   "operator",
 		Short: "Platform Mesh kbind provider",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runControllers(cmd.Context(), opts)
@@ -71,7 +71,7 @@ func main() {
 	}
 }
 
-func runControllers(ctx context.Context, opts *managerOptions) error {
+func runControllers(ctx context.Context, opts *operatorOptions) error {
 	kcpConfig, err := clientcmd.BuildConfigFromFlags("", opts.kcpKubeconfig)
 	if err != nil {
 		return fmt.Errorf("loading kcp kubeconfig: %w", err)

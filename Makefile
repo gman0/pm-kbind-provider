@@ -22,7 +22,7 @@ GOMOD = $(GOCMD) mod
 GOFMT = $(GOCMD) fmt
 
 # Binary names
-MANAGER_BINARY_NAME = manager
+OPERATOR_BINARY_NAME = operator
 
 # Build directory
 BUILD_DIR = bin
@@ -31,9 +31,9 @@ BUILD_DIR = bin
 IMAGE_REGISTRY ?= ghcr.io/platform-mesh
 IMAGE_TAG ?= dev
 
-# Manager image
-MANAGER_IMAGE_NAME ?= kbind-provider-manager
-MANAGER_IMAGE ?= $(IMAGE_REGISTRY)/$(MANAGER_IMAGE_NAME):$(IMAGE_TAG)
+# Operator image
+OPERATOR_IMAGE_NAME ?= kbind-provider-operator
+OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE_NAME):$(IMAGE_TAG)
 
 # Portal image
 PORTAL_IMAGE_NAME ?= kbind-provider-portal
@@ -45,12 +45,12 @@ all: build
 
 ## build: Build all binaries
 .PHONY: build
-build: build-manager
+build: build-operator
 
-## build-manager: Build the manager binary
-.PHONY: build-manager
-build-manager: fmt vet
-	$(GOBUILD) -o $(BUILD_DIR)/$(MANAGER_BINARY_NAME) ./cmd/manager/...
+## build-operator: Build the operator binary
+.PHONY: build-operator
+build-operator: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(OPERATOR_BINARY_NAME) ./cmd/operator/...
 
 ## fmt: Run go fmt
 .PHONY: fmt
@@ -67,15 +67,15 @@ vet:
 tidy:
 	$(GOMOD) tidy
 
-## manager-image-build: Build manager container image locally
-.PHONY: manager-image-build
-manager-image-build:
-	docker build -t $(MANAGER_IMAGE) -f deploy/Dockerfile .
+## operator-image-build: Build operator container image locally
+.PHONY: operator-image-build
+operator-image-build:
+	docker build -t $(OPERATOR_IMAGE) -f deploy/Dockerfile .
 
-## manager-image-push: Push manager container image to registry
-.PHONY: manager-image-push
-manager-image-push: manager-image-build
-	docker push $(MANAGER_IMAGE)
+## operator-image-push: Push operator container image to registry
+.PHONY: operator-image-push
+operator-image-push: operator-image-build
+	docker push $(OPERATOR_IMAGE)
 
 ## portal-image-build: Build portal container image locally
 .PHONY: portal-image-build
@@ -89,19 +89,19 @@ portal-image-push: portal-image-build
 
 ## images: Build all container images
 .PHONY: images
-images: manager-image-build portal-image-build
+images: operator-image-build portal-image-build
 
 ## images-push: Push all container images
 .PHONY: images-push
-images-push: manager-image-push portal-image-push
+images-push: operator-image-push portal-image-push
 
 # Kind cluster parameters
 KIND_CLUSTER ?= platform-mesh
 
-## kind-load-manager: Load manager image into kind cluster
-.PHONY: kind-load-manager
-kind-load-manager:
-	kind load docker-image $(MANAGER_IMAGE) --name $(KIND_CLUSTER)
+## kind-load-operator: Load operator image into kind cluster
+.PHONY: kind-load-operator
+kind-load-operator:
+	kind load docker-image $(OPERATOR_IMAGE) --name $(KIND_CLUSTER)
 
 ## kind-load-portal: Load portal image into kind cluster
 .PHONY: kind-load-portal
@@ -110,7 +110,7 @@ kind-load-portal:
 
 ## kind-load-all: Load all images into kind cluster
 .PHONY: kind-load-all
-kind-load-all: kind-load-manager kind-load-portal
+kind-load-all: kind-load-operator kind-load-portal
 
 ## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
 .PHONY: portal-run
