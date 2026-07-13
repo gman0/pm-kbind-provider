@@ -28,7 +28,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	issuerconfig "github.com/platform-mesh/kube-bind-provider/config/issuer"
 	providerconfig "github.com/platform-mesh/kube-bind-provider/config/provider"
 )
 
@@ -71,12 +70,6 @@ func (o *initOptions) run(ctx context.Context) error {
 	if err := confighelpers.Bootstrap(ctx, discoveryClient, dynamicClient,
 		sets.New[string](), providerconfig.FS, confighelpers.ReplaceOption()); err != nil {
 		return fmt.Errorf("bootstrapping provider resources: %w", err)
-	}
-
-	log.Info("bootstrapping issuer resources")
-	if err := confighelpers.Bootstrap(ctx, discoveryClient, dynamicClient,
-		sets.New[string](), issuerconfig.FS, confighelpers.ReplaceOption()); err != nil {
-		return fmt.Errorf("bootstrapping issuer resources: %w", err)
 	}
 
 	log.Info("bootstrap completed successfully")

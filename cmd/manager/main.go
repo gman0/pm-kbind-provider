@@ -105,7 +105,11 @@ func runControllers(ctx context.Context, opts *managerOptions) error {
 		return fmt.Errorf("creating manager: %w", err)
 	}
 
-	if err := (&controller.IssuerReconciler{}).SetupWithManager(mgr); err != nil {
+	issuerController, err := controller.NewIssuerController()
+	if err != nil {
+		return fmt.Errorf("failed to create issuer controller: %w", err)
+	}
+	if err := issuerController.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setting up issuer controller: %w", err)
 	}
 
