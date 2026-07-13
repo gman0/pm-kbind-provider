@@ -37,35 +37,39 @@ import (
 	mcmanager "sigs.k8s.io/multicluster-runtime/pkg/manager"
 	mcreconcile "sigs.k8s.io/multicluster-runtime/pkg/reconcile"
 
-	apisv1alpha1 "github.com/kcp-dev/sdk/apis/apis/v1alpha1"
+	apisv1alpha2 "github.com/kcp-dev/sdk/apis/apis/v1alpha2"
 )
 
 const (
 	kbindNamespace    = "kbind"
 	konnectorSA       = "kbind-konnector"
 	konnectorToken    = "kbind-konnector-token"
-	credentialsSecret = "kbind-credentials"
+	credentialsSecret = "kbind-kubeconfig"
 )
 
 // IssuerReconciler provisions konnector credentials in each consumer workspace
 // that has bound to the kbind APIExport.
 type IssuerReconciler struct {
-	Manager mcmanager.Manager
+	manager mcmanager.Manager
+}
+
+func NewIssuerController() (*IssuerReconciler, error) {
+	return &IssuerReconciler{}, nil
 }
 
 func (r *IssuerReconciler) SetupWithManager(mgr mcmanager.Manager) error {
-	r.Manager = mgr
+	r.manager = mgr
 
 	return mcbuilder.ControllerManagedBy(mgr).
 		Named("issuer-controller").
-		For(&apisv1alpha1.APIBinding{}).
+		For(&apisv1alpha2.APIBinding{}).
 		Complete(mcreconcile.Func(r.Reconcile))
 }
 
 func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx).WithValues("cluster", req.ClusterName)
 
-	cl, err := r.Manager.GetCluster(ctx, req.ClusterName)
+	cl, err := r.manager.GetCluster(ctx, req.ClusterName)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("getting cluster: %w", err)
 	}
