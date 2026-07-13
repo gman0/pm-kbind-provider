@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 
 	apisv1alpha1 "github.com/kcp-dev/sdk/apis/apis/v1alpha1"
+	apisv1alpha2 "github.com/kcp-dev/sdk/apis/apis/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -88,6 +89,9 @@ func runControllers(ctx context.Context, opts *operatorOptions) error {
 		return fmt.Errorf("adding rbacv1 scheme: %w", err)
 	}
 	if err := apisv1alpha1.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("adding kcp apis scheme: %w", err)
+	}
+	if err := apisv1alpha2.AddToScheme(scheme); err != nil {
 		return fmt.Errorf("adding kcp apis scheme: %w", err)
 	}
 
