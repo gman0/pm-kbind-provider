@@ -1,0 +1,96 @@
+<ui5-dynamic-page>
+  <ui5-dynamic-page-title slot="titleArea">
+    <ui5-title slot="heading" level="H3">Connect Cluster</ui5-title>
+    <ui5-label slot="subheading">Generate a one-apply konnector bundle for your downstream cluster.</ui5-label>
+    <ui5-toolbar slot="actionsBar" design="Transparent">
+      <ui5-toolbar-button text="Refresh" design="Transparent" icon="refresh" (click)="loadData()"></ui5-toolbar-button>
+    </ui5-toolbar>
+  </ui5-dynamic-page-title>
+
+  <div class="page-content">
+    @if (loading()) {
+      <div class="loading-state">
+        <ui5-text>Loading workspace data...</ui5-text>
+      </div>
+    } @else {
+      @if (!credentialsReady()) {
+        <div class="info-panel warning-panel">
+          <ui5-icon name="warning" class="panel-icon"></ui5-icon>
+          <div class="panel-body">
+            <ui5-title level="H6">Credentials not yet available</ui5-title>
+            <ui5-text>
+              The kbind issuer automatically provisions a kubeconfig in this workspace once it is bound
+              to the kbind APIExport. Refresh to check again.
+            </ui5-text>
+          </div>
+        </div>
+      }
+
+      <div class="form-section">
+        <div class="form-field">
+          <ui5-label for="bundle-name" required>Bundle name</ui5-label>
+          <ui5-input
+            id="bundle-name"
+            placeholder="my-cluster"
+            [value]="bundleName()"
+            (input)="onNameInput($event)"
+          ></ui5-input>
+          @if (bundleName().trim().length > 0 && !bundleNameValid()) {
+            <span class="field-error">Must be lowercase alphanumeric and hyphens only, no leading or trailing hyphen (e.g. <code>my-cluster</code>)</span>
+          } @else {
+            <span class="field-hint">Used as <code>metadata.name</code> for the Secret, Connection, and ClusterBinding</span>
+          }
+        </div>
+
+        <div class="form-field">
+          <ui5-label required>APIs to sync</ui5-label>
+          @if (availableAPIs().length === 0) {
+            <div class="empty-apis">
+              <ui5-text>No user-defined APIs found in this workspace. Bind API exports first.</ui5-text>
+            </div>
+          } @else {
+            <div class="api-list">
+              @for (api of availableAPIs(); track api) {
+                <ui5-checkbox
+                  [text]="api"
+                  [checked]="selectedAPIs().has(api)"
+                  (change)="onAPIToggle($event, api)"
+                ></ui5-checkbox>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="action-row">
+          <ui5-button
+            design="Emphasized"
+            icon="copy"
+            [disabled]="!canGenerate()"
+            (click)="generateBundle()"
+          >Copy bundle to clipboard</ui5-button>
+
+          @if (!credentialsReady()) {
+            <span class="action-hint">Waiting for credentials…</span>
+          } @else if (bundleName().trim().length > 0 && !bundleNameValid()) {
+            <span class="action-hint action-hint--error">Fix the bundle name above.</span>
+          } @else if (selectedAPIs().size === 0 && availableAPIs().length > 0) {
+            <span class="action-hint">Select at least one API to continue.</span>
+          }
+        </div>
+      </div>
+
+      @if (generatedBundle()) {
+        <div class="bundle-preview">
+          <div class="preview-header">
+            <ui5-title level="H6">Generated bundle</ui5-title>
+            <ui5-button design="Transparent" icon="copy" (click)="copyBundle()">Copy again</ui5-button>
+          </div>
+          <pre class="bundle-yaml">{{ generatedBundle() }}</pre>
+          <div class="apply-hint">
+            Paste into <code>bundle.yaml</code>, then apply:&nbsp;<code>kubectl apply -f bundle.yaml</code>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</ui5-dynamic-page>
