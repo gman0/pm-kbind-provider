@@ -26,10 +26,11 @@ import (
 	"github.com/spf13/cobra"
 
 	apisv1alpha1 "github.com/kcp-dev/sdk/apis/apis/v1alpha1"
-	apisv1alpha2 "github.com/kcp-dev/sdk/apis/apis/v1alpha1"
+	apisv1alpha2 "github.com/kcp-dev/sdk/apis/apis/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -44,6 +45,18 @@ import (
 type operatorOptions struct {
 	kcpKubeconfig string
 	endpointSlice string
+}
+
+var (
+	scheme = runtime.NewScheme()
+)
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(rbacv1.AddToScheme(scheme))
+	utilruntime.Must(apisv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apisv1alpha2.AddToScheme(scheme))
 }
 
 func main() {
@@ -78,22 +91,7 @@ func runControllers(ctx context.Context, opts *operatorOptions) error {
 		return fmt.Errorf("loading kcp kubeconfig: %w", err)
 	}
 
-	scheme := runtime.NewScheme()
-	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("adding client-go scheme: %w", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("adding corev1 scheme: %w", err)
-	}
-	if err := rbacv1.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("adding rbacv1 scheme: %w", err)
-	}
-	if err := apisv1alpha1.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("adding kcp apis scheme: %w", err)
-	}
-	if err := apisv1alpha2.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("adding kcp apis scheme: %w", err)
-	}
+	fmt.Printf("\n\n\n####\n\n\n")
 
 	provider, err := apiexport.New(kcpConfig, opts.endpointSlice, apiexport.Options{
 		Scheme: scheme,
