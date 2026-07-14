@@ -5,6 +5,12 @@ metadata:
     ui.platform-mesh.io/content-for: kbind.platform-mesh.io
   name: kbind.platform-mesh.io
 spec:
+  resources:
+    - group: kbind.platform-mesh.io
+      name: dummies
+      schema: today.dummies.kbind.platform-mesh.io
+      storage:
+        crd: {}
   permissionClaims:
     - group: ""
       resource: namespaces

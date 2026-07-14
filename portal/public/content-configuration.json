@@ -13,7 +13,7 @@
           "label": "Connect Cluster",
           "hideFromNav": false,
           "icon": "chain-link",
-          "url": "http://localhost:4300/index.html#/connect-cluster",
+          "url": "http://localhost:4300/kbind/#/connect-cluster",
           "entityType": "main.core_platform-mesh_io_account:1",
           "order": 900,
           "loadingIndicator": {

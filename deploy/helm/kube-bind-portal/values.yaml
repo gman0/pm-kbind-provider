@@ -55,7 +55,7 @@ httpRoute:
       kind: Gateway
       name: k8sapi-gateway
       namespace: platform-mesh-system
-  pathPrefix: /kube-bind
+  pathPrefix: /kbind
   filters:
     - extensionRef:
         group: traefik.io

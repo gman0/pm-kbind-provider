@@ -163,7 +163,7 @@ func (r *IssuerReconciler) ensureClusterRoleBinding(ctx context.Context, c clien
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "admin",
+			Name:     "cluster-admin",
 		},
 	}
 	if err := c.Create(ctx, crb); err != nil && !apierrors.IsAlreadyExists(err) {
