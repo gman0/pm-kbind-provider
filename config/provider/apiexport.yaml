@@ -5,22 +5,20 @@ metadata:
     ui.platform-mesh.io/content-for: kbind.platform-mesh.io
   name: kbind.platform-mesh.io
 spec:
-  resources:
-    - group: kbind.platform-mesh.io
-      name: dummies
-      schema: today.dummies.kbind.platform-mesh.io
-      storage:
-        crd: {}
   permissionClaims:
     - group: ""
       resource: namespaces
-      verbs: ["create", "get"]
+      # verbs: ["create", "get"]
+      verbs: ["*"]
     - group: ""
       resource: serviceaccounts
-      verbs: ["create", "get", "delete"]
+      # verbs: ["create", "get", "delete"]
+      verbs: ["*"]
     - group: ""
       resource: secrets
-      verbs: ["create", "get", "delete"]
+      # verbs: ["create", "get", "delete"]
+      verbs: ["*"]
     - group: "rbac.authorization.k8s.io"
       resource: clusterrolebindings
-      verbs: ["create", "get", "delete"]
+      # verbs: ["create", "get", "delete"]
+      verbs: ["*"]

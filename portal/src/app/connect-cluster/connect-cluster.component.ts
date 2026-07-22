@@ -20,12 +20,12 @@ import '@ui5/webcomponents-icons/dist/warning.js';
 
 import { BindingsService } from '../bindings/bindings.service';
 
-// Groups that belong to kcp internals — never surfaced to the konnector.
-const KCP_SYSTEM_SUFFIXES = ['.kcp.io'];
+// Groups that belong to kcp internals or platform-mesh infrastructure — never surfaced to the konnector.
+const SYSTEM_GROUP_SUFFIXES = ['.kcp.io', '.platform-mesh.io'];
 
 function isUserGroup(group: string): boolean {
   if (!group) return false;
-  return !KCP_SYSTEM_SUFFIXES.some((s) => group.endsWith(s));
+  return !SYSTEM_GROUP_SUFFIXES.some((s) => group.endsWith(s));
 }
 
 // Kubernetes name: lowercase alphanumeric and hyphens, no leading/trailing hyphen.
