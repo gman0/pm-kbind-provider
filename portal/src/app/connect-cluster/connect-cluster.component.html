@@ -43,21 +43,37 @@
         </div>
 
         <div class="form-field">
-          <ui5-label required>APIs to sync</ui5-label>
-          @if (availableAPIs().length === 0) {
-            <div class="empty-apis">
-              <ui5-text>No user-defined APIs found in this workspace. Bind API exports first.</ui5-text>
-            </div>
-          } @else {
-            <div class="api-list">
-              @for (api of availableAPIs(); track api) {
-                <ui5-checkbox
-                  [text]="api"
-                  [checked]="selectedAPIs().has(api)"
-                  (change)="onAPIToggle($event, api)"
-                ></ui5-checkbox>
-              }
-            </div>
+          <div class="field-label-row">
+            <ui5-label required>APIs to sync</ui5-label>
+            @if (!autoBind()) {
+              <ui5-checkbox
+                text="Hide system APIs"
+                [checked]="hideSystemAPIs()"
+                (change)="onToggleSystemFilter($event)"
+              ></ui5-checkbox>
+            }
+          </div>
+          <ui5-checkbox
+            text="Auto-bind all APIs"
+            [checked]="autoBind()"
+            (change)="onAutoBindToggle($event)"
+          ></ui5-checkbox>
+          @if (!autoBind()) {
+            @if (availableAPIs().length === 0) {
+              <div class="empty-apis">
+                <ui5-text>No user-defined APIs found in this workspace. Bind API exports first.</ui5-text>
+              </div>
+            } @else {
+              <div class="api-list">
+                @for (api of availableAPIs(); track api) {
+                  <ui5-checkbox
+                    [text]="api"
+                    [checked]="selectedAPIs().has(api)"
+                    (change)="onAPIToggle($event, api)"
+                  ></ui5-checkbox>
+                }
+              </div>
+            }
           }
         </div>
 
@@ -73,7 +89,7 @@
             <span class="action-hint">Waiting for credentials…</span>
           } @else if (bundleName().trim().length > 0 && !bundleNameValid()) {
             <span class="action-hint action-hint--error">Fix the bundle name above.</span>
-          } @else if (selectedAPIs().size === 0 && availableAPIs().length > 0) {
+          } @else if (!autoBind() && selectedAPIs().size === 0 && availableAPIs().length > 0) {
             <span class="action-hint">Select at least one API to continue.</span>
           }
         </div>

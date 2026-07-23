@@ -54,8 +54,15 @@ export class ConnectClusterComponent implements OnInit {
   private bindingsService = inject(BindingsService);
 
   bundleName = signal('');
+  autoBind = signal(false);
   selectedAPIs = signal<Set<string>>(new Set());
-  availableAPIs = signal<string[]>([]);
+  hideSystemAPIs = signal(true);
+  private allResourcePairs = signal<{ group: string; resource: string }[]>([]);
+  availableAPIs = computed(() => {
+    const pairs = this.allResourcePairs();
+    const filtered = this.hideSystemAPIs() ? pairs.filter(r => isUserGroup(r.group)) : pairs;
+    return [...new Set(filtered.map(r => `${r.resource}.${r.group}`))].sort();
+  });
   kubeconfig = signal<string | null>(null);
   loading = signal(true);
   credentialsReady = signal(false);
@@ -66,7 +73,7 @@ export class ConnectClusterComponent implements OnInit {
   canGenerate = computed(
     () =>
       this.bundleNameValid() &&
-      this.selectedAPIs().size > 0 &&
+      (this.autoBind() || this.selectedAPIs().size > 0) &&
       this.credentialsReady()
   );
 
@@ -87,15 +94,15 @@ export class ConnectClusterComponent implements OnInit {
       secret: this.bindingsService.getSecret('kbind-kubeconfig', 'kbind'),
     }).subscribe({
       next: ({ apis, secret }) => {
-        const apiNames = new Set<string>();
+        const allPairs: { group: string; resource: string }[] = [];
         for (const binding of apis) {
           for (const res of binding.status?.boundResources ?? []) {
-            if (isUserGroup(res.group)) {
-              apiNames.add(`${res.resource}.${res.group}`);
+            if (res.group !== undefined) {
+              allPairs.push(res);
             }
           }
         }
-        this.availableAPIs.set([...apiNames].sort());
+        this.allResourcePairs.set(allPairs);
 
         const rawKubeconfig = secret?.data?.['kubeconfig'];
         if (rawKubeconfig) {
@@ -132,6 +139,18 @@ export class ConnectClusterComponent implements OnInit {
     this.generatedBundle.set('');
   }
 
+  onAutoBindToggle(event: Event): void {
+    this.autoBind.set((event.target as any).checked as boolean);
+    this.selectedAPIs.set(new Set());
+    this.generatedBundle.set('');
+  }
+
+  onToggleSystemFilter(event: Event): void {
+    this.hideSystemAPIs.set((event.target as any).checked as boolean);
+    this.selectedAPIs.set(new Set());
+    this.generatedBundle.set('');
+  }
+
   onAPIToggle(event: Event, apiName: string): void {
     const checked = (event.target as any).checked as boolean;
     const next = new Set(this.selectedAPIs());
@@ -146,11 +165,12 @@ export class ConnectClusterComponent implements OnInit {
 
   generateBundle(): void {
     const name = this.bundleName().trim();
+    const autoBind = this.autoBind();
     const apis = [...this.selectedAPIs()].sort();
     const kubeconfig = this.kubeconfig();
-    if (!name || !apis.length || !kubeconfig) return;
+    if (!name || (!autoBind && !apis.length) || !kubeconfig) return;
 
-    const bundle = this.assembleBundle(name, apis, kubeconfig);
+    const bundle = this.assembleBundle(name, apis, kubeconfig, autoBind);
     this.generatedBundle.set(bundle);
     this.copyToClipboard(bundle, 'Bundle copied to clipboard');
   }
@@ -160,24 +180,23 @@ export class ConnectClusterComponent implements OnInit {
     if (bundle) this.copyToClipboard(bundle, 'Bundle copied to clipboard');
   }
 
-  private assembleBundle(name: string, apis: string[], kubeconfig: string): string {
+  private assembleBundle(name: string, apis: string[], kubeconfig: string, autoBind: boolean): string {
     const kubeconfigIndented = kubeconfig
       .trimEnd()
       .split('\n')
       .map((l) => `    ${l}`)
       .join('\n');
-    const apisYaml = apis.map((a) => `    - name: ${a}`).join('\n');
 
-    return `apiVersion: v1
+    const parts: string[] = [
+      `apiVersion: v1
 kind: Secret
 metadata:
   name: ${name}
   namespace: kbind
 stringData:
   kubeconfig: |
-${kubeconfigIndented}
----
-apiVersion: core.kbind.io/v1alpha1
+${kubeconfigIndented}`,
+      `apiVersion: core.kbind.io/v1alpha1
 kind: Connection
 metadata:
   name: ${name}
@@ -189,9 +208,12 @@ spec:
   schema:
     source: OpenAPI
     pullPolicy: Bound
-    updatePolicy: Always
----
-apiVersion: core.kbind.io/v1alpha1
+    updatePolicy: Always${autoBind ? '\n  autoBind: true' : ''}`,
+    ];
+
+    if (!autoBind) {
+      const apisYaml = apis.map((a) => `    - name: ${a}`).join('\n');
+      parts.push(`apiVersion: core.kbind.io/v1alpha1
 kind: ClusterBinding
 metadata:
   name: ${name}
@@ -199,7 +221,10 @@ spec:
   connectionRef:
     name: ${name}
   apis:
-${apisYaml}`;
+${apisYaml}`);
+    }
+
+    return parts.join('\n---\n');
   }
 
   private copyToClipboard(text: string, successMessage: string): void {
