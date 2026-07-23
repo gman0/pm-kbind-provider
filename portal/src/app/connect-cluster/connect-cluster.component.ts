@@ -14,6 +14,7 @@ import {
 } from '@ui5/webcomponents-ngx';
 import { forkJoin } from 'rxjs';
 
+import '@ui5/webcomponents-icons/dist/accept.js';
 import '@ui5/webcomponents-icons/dist/copy.js';
 import '@ui5/webcomponents-icons/dist/refresh.js';
 import '@ui5/webcomponents-icons/dist/warning.js';
@@ -151,16 +152,40 @@ export class ConnectClusterComponent implements OnInit {
     this.generatedBundle.set('');
   }
 
-  onAPIToggle(event: Event, apiName: string): void {
-    const checked = (event.target as any).checked as boolean;
+  onAPITileClick(api: string): void {
     const next = new Set(this.selectedAPIs());
-    if (checked) {
-      next.add(apiName);
+    if (next.has(api)) {
+      next.delete(api);
     } else {
-      next.delete(apiName);
+      next.add(api);
     }
     this.selectedAPIs.set(next);
     this.generatedBundle.set('');
+  }
+
+  // api is "resource.group" e.g. "cowboys.wildwest.dev"
+  getAPIResource(api: string): string {
+    return api.split('.')[0];
+  }
+
+  getAPIGroup(api: string): string {
+    const dot = api.indexOf('.');
+    return dot >= 0 ? api.slice(dot + 1) : '';
+  }
+
+  getAPIInitials(api: string): string {
+    return this.getAPIResource(api)[0]?.toUpperCase() ?? '?';
+  }
+
+  private readonly colorSchemes = [
+    'Accent1', 'Accent2', 'Accent3', 'Accent4', 'Accent5',
+    'Accent6', 'Accent7', 'Accent8', 'Accent9', 'Accent10',
+  ];
+
+  getColorScheme(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return this.colorSchemes[Math.abs(hash) % this.colorSchemes.length];
   }
 
   generateBundle(): void {

@@ -66,11 +66,18 @@
             } @else {
               <div class="api-list">
                 @for (api of availableAPIs(); track api) {
-                  <ui5-checkbox
-                    [text]="api"
-                    [checked]="selectedAPIs().has(api)"
-                    (change)="onAPIToggle($event, api)"
-                  ></ui5-checkbox>
+                  <div class="api-tile" [class.selected]="selectedAPIs().has(api)" (click)="onAPITileClick(api)">
+                    <div class="tile-header">
+                      <ui5-avatar size="S" shape="Circle" [initials]="getAPIInitials(api)" [colorScheme]="getColorScheme(api)"></ui5-avatar>
+                      <div class="tile-title">
+                        <ui5-title level="H6">{{ getAPIResource(api) }}</ui5-title>
+                        <ui5-label class="group-label">{{ getAPIGroup(api) }}</ui5-label>
+                      </div>
+                      @if (selectedAPIs().has(api)) {
+                        <ui5-icon name="accept" class="tile-check-icon"></ui5-icon>
+                      }
+                    </div>
+                  </div>
                 }
               </div>
             }
