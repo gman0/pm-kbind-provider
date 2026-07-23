@@ -55,7 +55,7 @@ export class ConnectClusterComponent implements OnInit {
   private bindingsService = inject(BindingsService);
 
   bundleName = signal('');
-  autoBind = signal(false);
+  autoBind = signal(true);
   selectedAPIs = signal<Set<string>>(new Set());
   hideSystemAPIs = signal(true);
   private allResourcePairs = signal<{ group: string; resource: string }[]>([]);
@@ -140,10 +140,13 @@ export class ConnectClusterComponent implements OnInit {
     this.generatedBundle.set('');
   }
 
-  onAutoBindToggle(event: Event): void {
-    this.autoBind.set((event.target as any).checked as boolean);
-    this.selectedAPIs.set(new Set());
-    this.generatedBundle.set('');
+  onPanelToggle(event: Event): void {
+    const collapsed = (event.target as any).collapsed as boolean;
+    this.autoBind.set(collapsed);
+    if (collapsed) {
+      this.selectedAPIs.set(new Set());
+      this.generatedBundle.set('');
+    }
   }
 
   onToggleSystemFilter(event: Event): void {

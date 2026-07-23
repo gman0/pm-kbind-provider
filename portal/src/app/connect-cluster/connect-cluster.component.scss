@@ -75,10 +75,19 @@
   }
 }
 
-.field-label-row {
+.api-panel {
+  margin-top: 0.25rem;
+}
+
+.panel-body {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 1rem;
+  padding: 1rem;
+}
+
+.hide-system-filter {
+  align-self: flex-start;
 }
 
 .api-list {
