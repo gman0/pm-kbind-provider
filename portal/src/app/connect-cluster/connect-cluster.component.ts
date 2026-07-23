@@ -17,6 +17,8 @@ import { forkJoin } from 'rxjs';
 import '@ui5/webcomponents-icons/dist/accept.js';
 import '@ui5/webcomponents-icons/dist/copy.js';
 import '@ui5/webcomponents-icons/dist/refresh.js';
+import '@ui5/webcomponents-icons/dist/slim-arrow-down.js';
+import '@ui5/webcomponents-icons/dist/slim-arrow-right.js';
 import '@ui5/webcomponents-icons/dist/warning.js';
 
 import { BindingsService } from '../bindings/bindings.service';
@@ -140,13 +142,14 @@ export class ConnectClusterComponent implements OnInit {
     this.generatedBundle.set('');
   }
 
-  onPanelToggle(event: Event): void {
-    const collapsed = (event.target as any).collapsed as boolean;
-    this.autoBind.set(collapsed);
-    if (collapsed) {
-      this.selectedAPIs.set(new Set());
-      this.generatedBundle.set('');
-    }
+  switchToAutoBind(): void {
+    this.autoBind.set(true);
+    this.selectedAPIs.set(new Set());
+    this.generatedBundle.set('');
+  }
+
+  switchToManual(): void {
+    this.autoBind.set(false);
   }
 
   onToggleSystemFilter(event: Event): void {

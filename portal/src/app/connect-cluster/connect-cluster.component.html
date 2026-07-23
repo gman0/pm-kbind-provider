@@ -42,43 +42,57 @@
           }
         </div>
 
-        <ui5-panel
-          header-text="Select specific APIs"
-          [collapsed]="autoBind()"
-          (toggle)="onPanelToggle($event)"
-          class="api-panel"
-        >
-          <div class="panel-body">
-            <ui5-checkbox
-              text="Hide system APIs"
-              [checked]="hideSystemAPIs()"
-              (change)="onToggleSystemFilter($event)"
-              class="hide-system-filter"
-            ></ui5-checkbox>
-            @if (availableAPIs().length === 0) {
-              <div class="empty-apis">
-                <ui5-text>No user-defined APIs found in this workspace. Bind API exports first.</ui5-text>
+        <div class="api-mode">
+          <div class="api-mode-item" [class.open]="autoBind()">
+            <div class="api-mode-header" (click)="switchToAutoBind()">
+              <ui5-icon [name]="autoBind() ? 'slim-arrow-down' : 'slim-arrow-right'" class="mode-arrow"></ui5-icon>
+              <span class="mode-title">All APIs</span>
+            </div>
+            @if (autoBind()) {
+              <div class="api-mode-body">
+                <ui5-text>All APIs in this workspace will be synced automatically.</ui5-text>
               </div>
-            } @else {
-              <div class="api-list">
-                @for (api of availableAPIs(); track api) {
-                  <div class="api-tile" [class.selected]="selectedAPIs().has(api)" (click)="onAPITileClick(api)">
-                    <div class="tile-header">
-                      <ui5-avatar size="S" shape="Circle" [initials]="getAPIInitials(api)" [colorScheme]="getColorScheme(api)"></ui5-avatar>
-                      <div class="tile-title">
-                        <ui5-title level="H6">{{ getAPIResource(api) }}</ui5-title>
-                        <ui5-label class="group-label">{{ getAPIGroup(api) }}</ui5-label>
+            }
+          </div>
+
+          <div class="api-mode-item" [class.open]="!autoBind()">
+            <div class="api-mode-header" (click)="switchToManual()">
+              <ui5-icon [name]="!autoBind() ? 'slim-arrow-down' : 'slim-arrow-right'" class="mode-arrow"></ui5-icon>
+              <span class="mode-title">Select specific APIs</span>
+            </div>
+            @if (!autoBind()) {
+              <div class="api-mode-body">
+                <ui5-checkbox
+                  text="Hide system APIs"
+                  [checked]="hideSystemAPIs()"
+                  (change)="onToggleSystemFilter($event)"
+                ></ui5-checkbox>
+                @if (availableAPIs().length === 0) {
+                  <div class="empty-apis">
+                    <ui5-text>No user-defined APIs found in this workspace. Bind API exports first.</ui5-text>
+                  </div>
+                } @else {
+                  <div class="api-list">
+                    @for (api of availableAPIs(); track api) {
+                      <div class="api-tile" [class.selected]="selectedAPIs().has(api)" (click)="onAPITileClick(api)">
+                        <div class="tile-header">
+                          <ui5-avatar size="S" shape="Circle" [initials]="getAPIInitials(api)" [colorScheme]="getColorScheme(api)"></ui5-avatar>
+                          <div class="tile-title">
+                            <ui5-title level="H6">{{ getAPIResource(api) }}</ui5-title>
+                            <ui5-label class="group-label">{{ getAPIGroup(api) }}</ui5-label>
+                          </div>
+                          @if (selectedAPIs().has(api)) {
+                            <ui5-icon name="accept" class="tile-check-icon"></ui5-icon>
+                          }
+                        </div>
                       </div>
-                      @if (selectedAPIs().has(api)) {
-                        <ui5-icon name="accept" class="tile-check-icon"></ui5-icon>
-                      }
-                    </div>
+                    }
                   </div>
                 }
               </div>
             }
           </div>
-        </ui5-panel>
+        </div>
 
         <div class="action-row">
           <ui5-button
