@@ -75,6 +75,11 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Reques
 	}
 	c := cl.GetClient()
 
+	// KbindCluster CRD
+	// - knows what bundles were created
+	// - we know which bundles are live by matching Lease
+	// - should list what APIs are being synced
+
 	// Short-circuit: credentials already written.
 	if err := c.Get(ctx, client.ObjectKey{Namespace: kbindNamespace, Name: credentialsSecret}, &corev1.Secret{}); err == nil {
 		return reconcile.Result{}, nil
