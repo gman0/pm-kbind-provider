@@ -21,6 +21,22 @@ GORUN = $(GOCMD) run
 GOMOD = $(GOCMD) mod
 GOFMT = $(GOCMD) fmt
 
+# hack scripts setup
+TOOLS_DIR = hack/tools
+export UGET_DIRECTORY = $(TOOLS_DIR)
+export UGET_CHECKSUMS = hack/tools.checksums
+export UGET_VERSIONED_BINARIES = true
+
+CONTROLLER_GEN_VER := v0.17.3
+CONTROLLER_GEN_BIN := controller-gen
+CONTROLLER_GEN := $(abspath $(TOOLS_DIR))/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
+export CONTROLLER_GEN # so hack scripts can use it
+
+KCP_APIGEN_VER := 0.32.3
+KCP_APIGEN_BIN := apigen
+KCP_APIGEN_GEN := $(TOOLS_DIR)/$(KCP_APIGEN_BIN)
+export KCP_APIGEN_GEN # so hack scripts can use it
+
 # Binary names
 OPERATOR_BINARY_NAME = operator
 
@@ -41,7 +57,7 @@ PORTAL_IMAGE ?= $(IMAGE_REGISTRY)/$(PORTAL_IMAGE_NAME):$(IMAGE_TAG)
 PORTAL_PORT ?= 4300
 
 .PHONY: all
-all: build
+all: codegen build
 
 ## build: Build all binaries
 .PHONY: build
@@ -51,6 +67,15 @@ build: build-operator
 .PHONY: build-operator
 build-operator: fmt vet
 	$(GOBUILD) -o $(BUILD_DIR)/$(OPERATOR_BINARY_NAME) ./cmd/operator/...
+
+tools: $(CONTROLLER_GEN) $(KCP_APIGEN_GEN) ## Install tools
+.PHONY: tools
+
+$(CONTROLLER_GEN):
+	@UNCOMPRESSED=true hack/uget.sh https://github.com/kubernetes-sigs/controller-tools/releases/download/{VERSION}/controller-gen-{GOOS}-{GOARCH} ${CONTROLLER_GEN_BIN} $(CONTROLLER_GEN_VER) controller-gen*
+
+$(KCP_APIGEN_GEN):
+	@UNCOMPRESSED=true hack/uget.sh https://github.com/kcp-dev/kcp/releases/download/v{VERSION}/apigen_{VERSION}_{GOOS}_{GOARCH}.tar.gz ${KCP_APIGEN_BIN} $(KCP_APIGEN_VER) apigen*
 
 ## fmt: Run go fmt
 .PHONY: fmt
@@ -128,6 +153,16 @@ portal-run-detached:
 .PHONY: portal-stop
 portal-stop:
 	docker stop kbind-portal
+
+# Refresh the chart's bundled CRDs from the generated sdk CRDs.
+.PHONY: helm-sync-crds
+helm-sync-crds: codegen
+	cp sdk/config/crd/core.kbind.io_*.yaml $(CHART)/files/crds/
+
+.PHONY: codegen
+codegen:
+	cd sdk && $(CONTROLLER_GEN) object paths=./apis/...
+	cd sdk && $(CONTROLLER_GEN) crd paths=./apis/... output:crd:dir=./config/crd
 
 ## helm-deps: Update Helm chart dependencies
 .PHONY: helm-deps
