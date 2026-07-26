@@ -34,8 +34,13 @@ export CONTROLLER_GEN # so hack scripts can use it
 
 KCP_APIGEN_VER := 0.32.3
 KCP_APIGEN_BIN := apigen
-KCP_APIGEN_GEN := $(abspath TOOLS_DIR)/$(KCP_APIGEN_BIN)
+KCP_APIGEN_GEN := $(abspath $(TOOLS_DIR))/$(KCP_APIGEN_BIN)-$(KCP_APIGEN_VER)
 export KCP_APIGEN_GEN # so hack scripts can use it
+
+YAML_PATCH_VER := v0.0.11
+YAML_PATCH_BIN := yaml-patch
+YAML_PATCH := $(abspath $(TOOLS_DIR))/$(YAML_PATCH_BIN)-$(YAML_PATCH_VER)
+export YAML_PATCH # so hack scripts can use it
 
 # Binary names
 OPERATOR_BINARY_NAME = operator
@@ -68,14 +73,17 @@ build: build-operator
 build-operator: fmt vet
 	$(GOBUILD) -o $(BUILD_DIR)/$(OPERATOR_BINARY_NAME) ./cmd/operator/...
 
-tools: $(CONTROLLER_GEN) $(KCP_APIGEN_GEN) ## Install tools
+tools: $(CONTROLLER_GEN) $(KCP_APIGEN_GEN) $(YAML_PATCH) ## Install tools
 .PHONY: tools
 
 $(CONTROLLER_GEN):
 	@UNCOMPRESSED=true hack/uget.sh https://github.com/kubernetes-sigs/controller-tools/releases/download/{VERSION}/controller-gen-{GOOS}-{GOARCH} ${CONTROLLER_GEN_BIN} $(CONTROLLER_GEN_VER) controller-gen*
 
 $(KCP_APIGEN_GEN):
-	@UNCOMPRESSED=true hack/uget.sh https://github.com/kcp-dev/kcp/releases/download/v{VERSION}/apigen_{VERSION}_{GOOS}_{GOARCH}.tar.gz ${KCP_APIGEN_BIN} $(KCP_APIGEN_VER) apigen*
+	@hack/uget.sh https://github.com/kcp-dev/kcp/releases/download/v{VERSION}/apigen_{VERSION}_{GOOS}_{GOARCH}.tar.gz $(KCP_APIGEN_BIN) $(KCP_APIGEN_VER) apigen*
+
+$(YAML_PATCH):
+	@GO_MODULE=true hack/uget.sh github.com/pivotal-cf/yaml-patch/cmd/yaml-patch $(YAML_PATCH_BIN) $(YAML_PATCH_VER)
 
 ## fmt: Run go fmt
 .PHONY: fmt
@@ -160,9 +168,17 @@ helm-sync-crds: codegen
 	cp sdk/config/crd/kube-bind-provider.platform-mesh.io_*.yaml $(OPERATOR_CHART)/crds/
 
 .PHONY: codegen
-codegen:
+codegen: $(CONTROLLER_GEN) $(KCP_APIGEN_GEN) $(YAML_PATCH)
 	cd sdk && $(CONTROLLER_GEN) object paths=./apis/...
 	cd sdk && $(CONTROLLER_GEN) crd paths=./apis/... output:crd:dir=./config/crd
+	rm -f sdk/config/crd/_.yaml
+	$(KCP_APIGEN_GEN) --input-dir sdk/config/crd --output-dir config/provider
+	@for f in config/provider/*.yaml-patch; do \
+		[ -f "$$f" ] || continue; \
+		target="$${f%-patch}"; \
+		echo "Patching $$target"; \
+		$(YAML_PATCH) -o "$$f" < "$$target" > "$$target.tmp" && mv "$$target.tmp" "$$target"; \
+	done
 
 ## helm-deps: Update Helm chart dependencies
 .PHONY: helm-deps

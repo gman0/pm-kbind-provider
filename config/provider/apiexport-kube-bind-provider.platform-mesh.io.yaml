@@ -1,0 +1,31 @@
+apiVersion: apis.kcp.io/v1alpha2
+kind: APIExport
+metadata:
+  labels:
+    ui.platform-mesh.io/content-for: kbind.platform-mesh.io
+  name: kube-bind-provider.platform-mesh.io
+spec:
+  permissionClaims:
+  - group: ""
+    resource: namespaces
+    verbs:
+    - '*'
+  - group: ""
+    resource: serviceaccounts
+    verbs:
+    - '*'
+  - group: ""
+    resource: secrets
+    verbs:
+    - '*'
+  - group: rbac.authorization.k8s.io
+    resource: clusterrolebindings
+    verbs:
+    - '*'
+  resources:
+  - group: kube-bind-provider.platform-mesh.io
+    name: kbindclusters
+    schema: v260727-9d203d0.kbindclusters.kube-bind-provider.platform-mesh.io
+    storage:
+      crd: {}
+status: {}
