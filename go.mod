@@ -1,6 +1,6 @@
 module github.com/platform-mesh/kube-bind-provider
 
-go 1.26.5
+go 1.26
 
 // kcp pre-release
 replace (

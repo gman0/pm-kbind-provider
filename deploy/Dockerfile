@@ -10,6 +10,7 @@ WORKDIR /workspace
 
 # Copy go mod files first for better caching
 COPY go.mod go.sum ./
+COPY sdk/ sdk/
 RUN go mod download
 
 # Copy source code
