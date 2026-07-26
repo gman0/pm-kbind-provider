@@ -1,4 +1,4 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import * as LuigiClient from '@luigi-project/client';
 import {
   ButtonComponent,
@@ -15,15 +15,18 @@ import {
 import { forkJoin } from 'rxjs';
 
 import '@ui5/webcomponents-icons/dist/accept.js';
+import '@ui5/webcomponents-icons/dist/add.js';
 import '@ui5/webcomponents-icons/dist/copy.js';
+import '@ui5/webcomponents-icons/dist/decline.js';
+import '@ui5/webcomponents-icons/dist/edit.js';
+import '@ui5/webcomponents-icons/dist/delete.js';
 import '@ui5/webcomponents-icons/dist/refresh.js';
 import '@ui5/webcomponents-icons/dist/slim-arrow-down.js';
 import '@ui5/webcomponents-icons/dist/slim-arrow-right.js';
 import '@ui5/webcomponents-icons/dist/warning.js';
 
-import { BindingsService } from '../bindings/bindings.service';
+import { BindingsService, KbindCluster } from '../bindings/bindings.service';
 
-// Groups that belong to kcp internals or platform-mesh infrastructure — never surfaced to the konnector.
 const SYSTEM_GROUP_SUFFIXES = ['.kcp.io', '.platform-mesh.io'];
 
 function isUserGroup(group: string): boolean {
@@ -31,7 +34,6 @@ function isUserGroup(group: string): boolean {
   return !SYSTEM_GROUP_SUFFIXES.some((s) => group.endsWith(s));
 }
 
-// Kubernetes name: lowercase alphanumeric and hyphens, no leading/trailing hyphen.
 const K8S_NAME_RE = /^[a-z0-9]([a-z0-9-]{0,251}[a-z0-9])?$/;
 
 @Component({
@@ -56,20 +58,32 @@ const K8S_NAME_RE = /^[a-z0-9]([a-z0-9-]{0,251}[a-z0-9])?$/;
 export class ConnectClusterComponent implements OnInit {
   private bindingsService = inject(BindingsService);
 
-  bundleName = signal('');
-  autoBind = signal(true);
-  selectedAPIs = signal<Set<string>>(new Set());
-  hideSystemAPIs = signal(true);
+  @ViewChild('createDialog') createDialogRef!: ElementRef;
+  @ViewChild('editDialog') editDialogRef!: ElementRef;
+  @ViewChild('deleteDialog') deleteDialogRef!: ElementRef;
+
+  // ── data ────────────────────────────────────────────────────────────────────
+
+  loading = signal(true);
+  credentialsReady = signal(false);
+  kbindClusters = signal<KbindCluster[]>([]);
   private allResourcePairs = signal<{ group: string; resource: string }[]>([]);
+  private kubeconfig = signal<string | null>(null);
+
   availableAPIs = computed(() => {
     const pairs = this.allResourcePairs();
     const filtered = this.hideSystemAPIs() ? pairs.filter(r => isUserGroup(r.group)) : pairs;
     return [...new Set(filtered.map(r => `${r.resource}.${r.group}`))].sort();
   });
-  kubeconfig = signal<string | null>(null);
-  loading = signal(true);
-  credentialsReady = signal(false);
+
+  // ── create dialog state ──────────────────────────────────────────────────────
+
+  bundleName = signal('');
+  autoBind = signal(true);
+  selectedAPIs = signal<Set<string>>(new Set());
+  hideSystemAPIs = signal(true);
   generatedBundle = signal('');
+  creating = signal(false);
 
   bundleNameValid = computed(() => K8S_NAME_RE.test(this.bundleName().trim()));
 
@@ -80,6 +94,36 @@ export class ConnectClusterComponent implements OnInit {
       this.credentialsReady()
   );
 
+  // ── edit dialog state ────────────────────────────────────────────────────────
+
+  editingCluster = signal<KbindCluster | null>(null);
+  editSelectedAPIs = signal<Set<string>>(new Set());
+  editHideSystemAPIs = signal(true);
+  editGeneratedYAML = signal('');
+  saving = signal(false);
+
+  editIsAutoBind = computed(() => {
+    const c = this.editingCluster();
+    return !c?.spec?.apis || c.spec.apis.length === 0;
+  });
+
+  editAvailableAPIs = computed(() => {
+    const pairs = this.allResourcePairs();
+    const filtered = this.editHideSystemAPIs() ? pairs.filter(r => isUserGroup(r.group)) : pairs;
+    return [...new Set(filtered.map(r => `${r.resource}.${r.group}`))].sort();
+  });
+
+  canSaveEdit = computed(
+    () => !this.editIsAutoBind() && this.editSelectedAPIs().size > 0
+  );
+
+  // ── delete dialog state ──────────────────────────────────────────────────────
+
+  deletingClusterName = signal('');
+  deleting = signal(false);
+
+  // ── lifecycle ────────────────────────────────────────────────────────────────
+
   ngOnInit(): void {
     LuigiClient.addInitListener(() => {
       LuigiClient.uxManager().showLoadingIndicator();
@@ -89,20 +133,17 @@ export class ConnectClusterComponent implements OnInit {
 
   loadData(): void {
     this.loading.set(true);
-    this.generatedBundle.set('');
-    this.selectedAPIs.set(new Set());
 
     forkJoin({
       apis: this.bindingsService.listAPIBindings(),
       secret: this.bindingsService.getSecret('kbind-kubeconfig', 'kbind'),
+      clusters: this.bindingsService.listKbindClusters(),
     }).subscribe({
-      next: ({ apis, secret }) => {
+      next: ({ apis, secret, clusters }) => {
         const allPairs: { group: string; resource: string }[] = [];
         for (const binding of apis) {
           for (const res of binding.status?.boundResources ?? []) {
-            if (res.group !== undefined) {
-              allPairs.push(res);
-            }
+            if (res.group !== undefined) allPairs.push(res);
           }
         }
         this.allResourcePairs.set(allPairs);
@@ -121,6 +162,7 @@ export class ConnectClusterComponent implements OnInit {
           this.credentialsReady.set(false);
         }
 
+        this.kbindClusters.set(clusters);
         this.loading.set(false);
         LuigiClient.uxManager().hideLoadingIndicator();
       },
@@ -128,14 +170,58 @@ export class ConnectClusterComponent implements OnInit {
         console.error('Failed to load data:', err);
         this.loading.set(false);
         LuigiClient.uxManager().hideLoadingIndicator();
-        LuigiClient.uxManager().showAlert({
-          text: 'Failed to load workspace data',
-          type: 'error',
-          closeAfter: 4000,
-        });
+        LuigiClient.uxManager().showAlert({ text: 'Failed to load workspace data', type: 'error', closeAfter: 4000 });
       },
     });
   }
+
+  // ── create dialog ────────────────────────────────────────────────────────────
+
+  openCreateDialog(): void {
+    this.bundleName.set('');
+    this.autoBind.set(true);
+    this.selectedAPIs.set(new Set());
+    this.hideSystemAPIs.set(true);
+    this.generatedBundle.set('');
+    this.creating.set(false);
+    this.createDialogRef.nativeElement.show();
+  }
+
+  closeCreateDialog(): void {
+    this.createDialogRef.nativeElement.close();
+  }
+
+  generateAndCreate(): void {
+    const name = this.bundleName().trim();
+    const autoBind = this.autoBind();
+    const apis = [...this.selectedAPIs()].sort();
+    const kubeconfig = this.kubeconfig();
+    if (!name || (!autoBind && !apis.length) || !kubeconfig) return;
+
+    const bundle = this.assembleBundle(name, apis, kubeconfig, autoBind);
+    this.generatedBundle.set(bundle);
+    this.copyToClipboard(bundle, 'Bundle copied to clipboard');
+
+    // Persist to API
+    this.creating.set(true);
+    const apiRefs = autoBind ? [] : apis.map(a => ({ name: a }));
+    this.bindingsService.createKbindCluster({
+      metadata: { name },
+      spec: { apis: apiRefs },
+    }).subscribe({
+      next: () => {
+        this.creating.set(false);
+        this.closeCreateDialog();
+        this.loadData();
+      },
+      error: () => {
+        this.creating.set(false);
+        LuigiClient.uxManager().showAlert({ text: 'Failed to create KbindCluster', type: 'error', closeAfter: 4000 });
+      },
+    });
+  }
+
+  // ── create form helpers ───────────────────────────────────────────────────────
 
   onNameInput(event: Event): void {
     this.bundleName.set((event.target as any).value as string);
@@ -160,16 +246,164 @@ export class ConnectClusterComponent implements OnInit {
 
   onAPITileClick(api: string): void {
     const next = new Set(this.selectedAPIs());
-    if (next.has(api)) {
-      next.delete(api);
-    } else {
-      next.add(api);
-    }
+    next.has(api) ? next.delete(api) : next.add(api);
     this.selectedAPIs.set(next);
     this.generatedBundle.set('');
   }
 
-  // api is "resource.group" e.g. "cowboys.wildwest.dev"
+  // ── edit dialog ───────────────────────────────────────────────────────────────
+
+  openEditDialog(cluster: KbindCluster): void {
+    this.editingCluster.set(cluster);
+    const preSelected = new Set((cluster.spec?.apis ?? []).map(a => a.name));
+    this.editSelectedAPIs.set(preSelected);
+    this.editHideSystemAPIs.set(true);
+    this.editGeneratedYAML.set('');
+    this.saving.set(false);
+    this.editDialogRef.nativeElement.show();
+  }
+
+  closeEditDialog(): void {
+    this.editDialogRef.nativeElement.close();
+  }
+
+  onEditAPITileClick(api: string): void {
+    const next = new Set(this.editSelectedAPIs());
+    next.has(api) ? next.delete(api) : next.add(api);
+    this.editSelectedAPIs.set(next);
+    this.editGeneratedYAML.set('');
+  }
+
+  onEditToggleSystemFilter(event: Event): void {
+    this.editHideSystemAPIs.set((event.target as any).checked as boolean);
+  }
+
+  generateClusterBinding(): void {
+    const cluster = this.editingCluster();
+    if (!cluster) return;
+    const name = cluster.metadata.name;
+    const apis = [...this.editSelectedAPIs()].sort();
+    const apisYaml = apis.map(a => `    - name: ${a}`).join('\n');
+    const yaml = `apiVersion: core.kbind.io/v1alpha1
+kind: ClusterBinding
+metadata:
+  name: ${name}
+spec:
+  connectionRef:
+    name: ${name}
+  apis:
+${apisYaml}`;
+    this.editGeneratedYAML.set(yaml);
+    this.copyToClipboard(yaml, 'ClusterBinding YAML copied to clipboard');
+  }
+
+  copyBundle(): void {
+    const bundle = this.generatedBundle();
+    if (bundle) this.copyToClipboard(bundle, 'Bundle copied to clipboard');
+  }
+
+  copyEditYAML(): void {
+    const yaml = this.editGeneratedYAML();
+    if (yaml) this.copyToClipboard(yaml, 'ClusterBinding YAML copied to clipboard');
+  }
+
+  saveEdit(): void {
+    const cluster = this.editingCluster();
+    if (!cluster || !this.canSaveEdit()) return;
+    const apis = [...this.editSelectedAPIs()].sort().map(a => ({ name: a }));
+    this.saving.set(true);
+    this.bindingsService.patchKbindClusterSpec(cluster.metadata.name, apis).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeEditDialog();
+        this.loadData();
+      },
+      error: () => {
+        this.saving.set(false);
+        LuigiClient.uxManager().showAlert({ text: 'Failed to update KbindCluster', type: 'error', closeAfter: 4000 });
+      },
+    });
+  }
+
+  // ── delete dialog ─────────────────────────────────────────────────────────────
+
+  openDeleteDialog(name: string): void {
+    this.deletingClusterName.set(name);
+    this.deleting.set(false);
+    this.deleteDialogRef.nativeElement.show();
+  }
+
+  closeDeleteDialog(): void {
+    this.deleteDialogRef.nativeElement.close();
+  }
+
+  executeDelete(): void {
+    const name = this.deletingClusterName();
+    if (!name) return;
+    this.deleting.set(true);
+    this.bindingsService.deleteKbindCluster(name).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.closeDeleteDialog();
+        this.loadData();
+      },
+      error: () => {
+        this.deleting.set(false);
+        LuigiClient.uxManager().showAlert({ text: 'Failed to delete KbindCluster', type: 'error', closeAfter: 4000 });
+      },
+    });
+  }
+
+  // ── status display helpers ───────────────────────────────────────────────────
+
+  getConnectedCondition(cluster: KbindCluster) {
+    return cluster.status?.conditions?.find(c => c.type === 'Connected');
+  }
+
+  getStatusLabel(cluster: KbindCluster): string {
+    const cond = this.getConnectedCondition(cluster);
+    if (!cond) return 'Unknown';
+    if (cond.status === 'True') return 'Connected';
+    return cond.reason === 'LeaseNotFound' ? 'Not connected' : 'Stale';
+  }
+
+  getStatusClass(cluster: KbindCluster): string {
+    const cond = this.getConnectedCondition(cluster);
+    if (!cond) return 'status-unknown';
+    if (cond.status === 'True') return 'status-connected';
+    return cond.reason === 'LeaseNotFound' ? 'status-pending' : 'status-stale';
+  }
+
+  getLastHeartbeat(cluster: KbindCluster): string {
+    const cond = this.getConnectedCondition(cluster);
+    if (!cond?.lastTransitionTime) return '—';
+    return this.formatRelativeTime(cond.lastTransitionTime);
+  }
+
+  getAPISummary(cluster: KbindCluster): string {
+    const apis = cluster.spec?.apis;
+    if (!apis || apis.length === 0) return 'All APIs';
+    if (apis.length <= 2) return apis.map(a => a.name).join(', ');
+    return `${apis[0].name}, ${apis[1].name} +${apis.length - 2} more`;
+  }
+
+  isAutoBind(cluster: KbindCluster): boolean {
+    return !cluster.spec?.apis || cluster.spec.apis.length === 0;
+  }
+
+  private formatRelativeTime(iso: string): string {
+    const delta = Date.now() - new Date(iso).getTime();
+    const s = Math.floor(delta / 1000);
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+
+  // ── shared API tile helpers ──────────────────────────────────────────────────
+
   getAPIResource(api: string): string {
     return api.split('.')[0];
   }
@@ -194,69 +428,7 @@ export class ConnectClusterComponent implements OnInit {
     return this.colorSchemes[Math.abs(hash) % this.colorSchemes.length];
   }
 
-  generateBundle(): void {
-    const name = this.bundleName().trim();
-    const autoBind = this.autoBind();
-    const apis = [...this.selectedAPIs()].sort();
-    const kubeconfig = this.kubeconfig();
-    if (!name || (!autoBind && !apis.length) || !kubeconfig) return;
-
-    const bundle = this.assembleBundle(name, apis, kubeconfig, autoBind);
-    this.generatedBundle.set(bundle);
-    this.copyToClipboard(bundle, 'Bundle copied to clipboard');
-  }
-
-  copyBundle(): void {
-    const bundle = this.generatedBundle();
-    if (bundle) this.copyToClipboard(bundle, 'Bundle copied to clipboard');
-  }
-
-  private assembleBundle(name: string, apis: string[], kubeconfig: string, autoBind: boolean): string {
-    const kubeconfigIndented = kubeconfig
-      .trimEnd()
-      .split('\n')
-      .map((l) => `    ${l}`)
-      .join('\n');
-
-    const parts: string[] = [
-      `apiVersion: v1
-kind: Secret
-metadata:
-  name: ${name}
-  namespace: kbind
-stringData:
-  kubeconfig: |
-${kubeconfigIndented}`,
-      `apiVersion: core.kbind.io/v1alpha1
-kind: Connection
-metadata:
-  name: ${name}
-spec:
-  kubeconfigSecretRef:
-    namespace: kbind
-    name: ${name}
-    key: kubeconfig
-  schema:
-    source: OpenAPI
-    pullPolicy: Bound
-    updatePolicy: Always${autoBind ? '\n  autoBind: true' : ''}`,
-    ];
-
-    if (!autoBind) {
-      const apisYaml = apis.map((a) => `    - name: ${a}`).join('\n');
-      parts.push(`apiVersion: core.kbind.io/v1alpha1
-kind: ClusterBinding
-metadata:
-  name: ${name}
-spec:
-  connectionRef:
-    name: ${name}
-  apis:
-${apisYaml}`);
-    }
-
-    return parts.join('\n---\n');
-  }
+  // ── clipboard ─────────────────────────────────────────────────────────────────
 
   private copyToClipboard(text: string, successMessage: string): void {
     if (navigator.clipboard && window.isSecureContext) {
@@ -283,5 +455,50 @@ ${apisYaml}`);
       }
     } catch {}
     document.body.removeChild(ta);
+  }
+
+  // ── bundle assembly (create) ─────────────────────────────────────────────────
+
+  private assembleBundle(name: string, apis: string[], kubeconfig: string, autoBind: boolean): string {
+    const kubeconfigIndented = kubeconfig.trimEnd().split('\n').map(l => `    ${l}`).join('\n');
+
+    const parts: string[] = [
+      `apiVersion: v1
+kind: Secret
+metadata:
+  name: ${name}
+  namespace: kbind
+stringData:
+  kubeconfig: |
+${kubeconfigIndented}`,
+      `apiVersion: core.kbind.io/v1alpha1
+kind: Connection
+metadata:
+  name: ${name}
+spec:
+  kubeconfigSecretRef:
+    namespace: kbind
+    name: ${name}
+    key: kubeconfig
+  schema:
+    source: OpenAPI
+    pullPolicy: Bound
+    updatePolicy: Always${autoBind ? '\n  autoBind: true' : ''}`,
+    ];
+
+    if (!autoBind) {
+      const apisYaml = apis.map(a => `    - name: ${a}`).join('\n');
+      parts.push(`apiVersion: core.kbind.io/v1alpha1
+kind: ClusterBinding
+metadata:
+  name: ${name}
+spec:
+  connectionRef:
+    name: ${name}
+  apis:
+${apisYaml}`);
+    }
+
+    return parts.join('\n---\n');
   }
 }

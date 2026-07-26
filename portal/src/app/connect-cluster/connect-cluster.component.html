@@ -1,8 +1,9 @@
 <ui5-dynamic-page>
   <ui5-dynamic-page-title slot="titleArea">
-    <ui5-title slot="heading" level="H3">Connect Cluster</ui5-title>
-    <ui5-label slot="subheading">Generate a one-apply konnector bundle for your downstream cluster.</ui5-label>
+    <ui5-title slot="heading" level="H3">Connections</ui5-title>
+    <ui5-label slot="subheading">Manage kbind bundles connecting downstream clusters to this workspace.</ui5-label>
     <ui5-toolbar slot="actionsBar" design="Transparent">
+      <ui5-toolbar-button text="Add connection" icon="add" design="Emphasized" (click)="openCreateDialog()"></ui5-toolbar-button>
       <ui5-toolbar-button text="Refresh" design="Transparent" icon="refresh" (click)="loadData()"></ui5-toolbar-button>
     </ui5-toolbar>
   </ui5-dynamic-page-title>
@@ -10,7 +11,7 @@
   <div class="page-content">
     @if (loading()) {
       <div class="loading-state">
-        <ui5-text>Loading workspace data...</ui5-text>
+        <ui5-text>Loading...</ui5-text>
       </div>
     } @else {
       @if (!credentialsReady()) {
@@ -19,95 +20,130 @@
           <div class="panel-body">
             <ui5-title level="H6">Credentials not yet available</ui5-title>
             <ui5-text>
-              The kbind issuer automatically provisions a kubeconfig in this workspace once it is bound
+              The kbind issuer automatically provisions a kubeconfig once this workspace is bound
               to the kbind APIExport. Refresh to check again.
             </ui5-text>
           </div>
         </div>
       }
 
-      <div class="form-section">
-        <div class="form-field">
-          <ui5-label for="bundle-name" required>Bundle name</ui5-label>
-          <ui5-input
-            id="bundle-name"
-            placeholder="my-cluster"
-            [value]="bundleName()"
-            (input)="onNameInput($event)"
-          ></ui5-input>
-          @if (bundleName().trim().length > 0 && !bundleNameValid()) {
-            <span class="field-error">Must be lowercase alphanumeric and hyphens only, no leading or trailing hyphen (e.g. <code>my-cluster</code>)</span>
-          } @else {
-            <span class="field-hint">Used as <code>metadata.name</code> for the Secret, Connection, and ClusterBinding</span>
+      @if (kbindClusters().length === 0) {
+        <div class="empty-state">
+          <ui5-icon name="add" class="empty-icon"></ui5-icon>
+          <ui5-title level="H5">No connections yet</ui5-title>
+          <ui5-text>Click "Add connection" to generate a bundle for a downstream cluster.</ui5-text>
+        </div>
+      } @else {
+        <div class="connections-list">
+          @for (cluster of kbindClusters(); track cluster.metadata.name) {
+            <div class="connection-row">
+              <div class="connection-main">
+                <div class="connection-name">
+                  <ui5-title level="H6">{{ cluster.metadata.name }}</ui5-title>
+                </div>
+                <div class="connection-meta">
+                  <span class="status-badge" [class]="getStatusClass(cluster)">
+                    <span class="status-dot"></span>
+                    {{ getStatusLabel(cluster) }}
+                  </span>
+                  <span class="meta-item">
+                    <span class="meta-label">Last heartbeat:</span>
+                    {{ getLastHeartbeat(cluster) }}
+                  </span>
+                  <span class="meta-item">
+                    <span class="meta-label">APIs:</span>
+                    {{ getAPISummary(cluster) }}
+                  </span>
+                </div>
+              </div>
+              <div class="connection-actions">
+                <ui5-button design="Transparent" icon="edit" (click)="openEditDialog(cluster)">Edit</ui5-button>
+                <ui5-button design="Transparent" icon="delete" (click)="openDeleteDialog(cluster.metadata.name)">Delete</ui5-button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+</ui5-dynamic-page>
+
+<!-- ── Create dialog ─────────────────────────────────────────────────────────── -->
+<ui5-dialog #createDialog header-text="Add connection" style="width: 680px">
+  <div class="dialog-content">
+    @if (!credentialsReady()) {
+      <div class="info-panel warning-panel" style="margin-bottom: 1.25rem">
+        <ui5-icon name="warning" class="panel-icon"></ui5-icon>
+        <div class="panel-body">
+          <ui5-text>Credentials are not yet available. Bundle cannot be generated until the kbind issuer provisions a kubeconfig.</ui5-text>
+        </div>
+      </div>
+    }
+
+    <div class="form-section">
+      <div class="form-field">
+        <ui5-label for="create-bundle-name" required>Bundle name</ui5-label>
+        <ui5-input
+          id="create-bundle-name"
+          placeholder="my-cluster"
+          [value]="bundleName()"
+          (input)="onNameInput($event)"
+        ></ui5-input>
+        @if (bundleName().trim().length > 0 && !bundleNameValid()) {
+          <span class="field-error">Lowercase alphanumeric and hyphens only, no leading/trailing hyphen.</span>
+        } @else {
+          <span class="field-hint">Used as <code>metadata.name</code> for the Secret, Connection, and ClusterBinding.</span>
+        }
+      </div>
+
+      <div class="api-mode">
+        <div class="api-mode-item" [class.open]="autoBind()">
+          <div class="api-mode-header" (click)="switchToAutoBind()">
+            <ui5-icon [name]="autoBind() ? 'slim-arrow-down' : 'slim-arrow-right'" class="mode-arrow"></ui5-icon>
+            <span class="mode-title">All APIs</span>
+          </div>
+          @if (autoBind()) {
+            <div class="api-mode-body">
+              <ui5-text>All APIs in this workspace will be synced automatically.</ui5-text>
+            </div>
           }
         </div>
 
-        <div class="api-mode">
-          <div class="api-mode-item" [class.open]="autoBind()">
-            <div class="api-mode-header" (click)="switchToAutoBind()">
-              <ui5-icon [name]="autoBind() ? 'slim-arrow-down' : 'slim-arrow-right'" class="mode-arrow"></ui5-icon>
-              <span class="mode-title">All APIs</span>
-            </div>
-            @if (autoBind()) {
-              <div class="api-mode-body">
-                <ui5-text>All APIs in this workspace will be synced automatically.</ui5-text>
-              </div>
-            }
+        <div class="api-mode-item" [class.open]="!autoBind()">
+          <div class="api-mode-header" (click)="switchToManual()">
+            <ui5-icon [name]="!autoBind() ? 'slim-arrow-down' : 'slim-arrow-right'" class="mode-arrow"></ui5-icon>
+            <span class="mode-title">Select specific APIs</span>
           </div>
-
-          <div class="api-mode-item" [class.open]="!autoBind()">
-            <div class="api-mode-header" (click)="switchToManual()">
-              <ui5-icon [name]="!autoBind() ? 'slim-arrow-down' : 'slim-arrow-right'" class="mode-arrow"></ui5-icon>
-              <span class="mode-title">Select specific APIs</span>
-            </div>
-            @if (!autoBind()) {
-              <div class="api-mode-body">
-                <ui5-checkbox
-                  text="Hide system APIs"
-                  [checked]="hideSystemAPIs()"
-                  (change)="onToggleSystemFilter($event)"
-                ></ui5-checkbox>
-                @if (availableAPIs().length === 0) {
-                  <div class="empty-apis">
-                    <ui5-text>No user-defined APIs found in this workspace. Bind API exports first.</ui5-text>
-                  </div>
-                } @else {
-                  <div class="api-list">
-                    @for (api of availableAPIs(); track api) {
-                      <div class="api-tile" [class.selected]="selectedAPIs().has(api)" (click)="onAPITileClick(api)">
-                        <div class="tile-header">
-                          <ui5-avatar size="S" shape="Circle" [initials]="getAPIInitials(api)" [colorScheme]="getColorScheme(api)"></ui5-avatar>
-                          <div class="tile-title">
-                            <ui5-title level="H6">{{ getAPIResource(api) }}</ui5-title>
-                            <ui5-label class="group-label">{{ getAPIGroup(api) }}</ui5-label>
-                          </div>
-                          @if (selectedAPIs().has(api)) {
-                            <ui5-icon name="accept" class="tile-check-icon"></ui5-icon>
-                          }
+          @if (!autoBind()) {
+            <div class="api-mode-body">
+              <ui5-checkbox
+                text="Hide system APIs"
+                [checked]="hideSystemAPIs()"
+                (change)="onToggleSystemFilter($event)"
+              ></ui5-checkbox>
+              @if (availableAPIs().length === 0) {
+                <div class="empty-apis">
+                  <ui5-text>No user-defined APIs found. Bind API exports first.</ui5-text>
+                </div>
+              } @else {
+                <div class="api-list">
+                  @for (api of availableAPIs(); track api) {
+                    <div class="api-tile" [class.selected]="selectedAPIs().has(api)" (click)="onAPITileClick(api)">
+                      <div class="tile-header">
+                        <ui5-avatar size="S" shape="Circle" [initials]="getAPIInitials(api)" [colorScheme]="getColorScheme(api)"></ui5-avatar>
+                        <div class="tile-title">
+                          <ui5-title level="H6">{{ getAPIResource(api) }}</ui5-title>
+                          <ui5-label class="group-label">{{ getAPIGroup(api) }}</ui5-label>
                         </div>
+                        @if (selectedAPIs().has(api)) {
+                          <ui5-icon name="accept" class="tile-check-icon"></ui5-icon>
+                        }
                       </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        </div>
-
-        <div class="action-row">
-          <ui5-button
-            design="Emphasized"
-            icon="copy"
-            [disabled]="!canGenerate()"
-            (click)="generateBundle()"
-          >Copy bundle to clipboard</ui5-button>
-
-          @if (!credentialsReady()) {
-            <span class="action-hint">Waiting for credentials…</span>
-          } @else if (bundleName().trim().length > 0 && !bundleNameValid()) {
-            <span class="action-hint action-hint--error">Fix the bundle name above.</span>
-          } @else if (!autoBind() && selectedAPIs().size === 0 && availableAPIs().length > 0) {
-            <span class="action-hint">Select at least one API to continue.</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
           }
         </div>
       </div>
@@ -120,10 +156,116 @@
           </div>
           <pre class="bundle-yaml">{{ generatedBundle() }}</pre>
           <div class="apply-hint">
-            Paste into <code>bundle.yaml</code>, then apply:&nbsp;<code>kubectl apply -f bundle.yaml</code>
+            Apply with: <code>kubectl apply -f bundle.yaml</code>
           </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div slot="footer" class="dialog-footer">
+    <ui5-button design="Transparent" (click)="closeCreateDialog()">Cancel</ui5-button>
+    <ui5-button
+      design="Emphasized"
+      icon="copy"
+      [disabled]="!canGenerate() || creating()"
+      (click)="generateAndCreate()"
+    >{{ creating() ? 'Saving…' : 'Copy bundle &amp; save' }}</ui5-button>
+  </div>
+</ui5-dialog>
+
+<!-- ── Edit dialog ────────────────────────────────────────────────────────────── -->
+<ui5-dialog #editDialog [attr.header-text]="'Edit — ' + (editingCluster()?.metadata?.name ?? '')" style="width: 680px">
+  <div class="dialog-content">
+    @if (editingCluster(); as cluster) {
+      @if (editIsAutoBind()) {
+        <div class="info-panel info-panel--neutral">
+          <ui5-text>
+            This connection binds <strong>all APIs</strong> automatically (<code>autoBind: true</code>).
+            No ClusterBinding was generated. To restrict to specific APIs, delete this connection
+            and create a new one with "Select specific APIs".
+          </ui5-text>
+        </div>
+      } @else {
+        <div class="edit-section">
+          <ui5-title level="H6" style="margin-bottom: 0.75rem">Selected APIs</ui5-title>
+          <ui5-checkbox
+            text="Hide system APIs"
+            [checked]="editHideSystemAPIs()"
+            (change)="onEditToggleSystemFilter($event)"
+          ></ui5-checkbox>
+          @if (editAvailableAPIs().length === 0) {
+            <div class="empty-apis"><ui5-text>No user-defined APIs found.</ui5-text></div>
+          } @else {
+            <div class="api-list" style="margin-top: 0.75rem">
+              @for (api of editAvailableAPIs(); track api) {
+                <div class="api-tile" [class.selected]="editSelectedAPIs().has(api)" (click)="onEditAPITileClick(api)">
+                  <div class="tile-header">
+                    <ui5-avatar size="S" shape="Circle" [initials]="getAPIInitials(api)" [colorScheme]="getColorScheme(api)"></ui5-avatar>
+                    <div class="tile-title">
+                      <ui5-title level="H6">{{ getAPIResource(api) }}</ui5-title>
+                      <ui5-label class="group-label">{{ getAPIGroup(api) }}</ui5-label>
+                    </div>
+                    @if (editSelectedAPIs().has(api)) {
+                      <ui5-icon name="accept" class="tile-check-icon"></ui5-icon>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <div class="action-row" style="margin-top: 1rem">
+            <ui5-button
+              design="Default"
+              icon="copy"
+              [disabled]="editSelectedAPIs().size === 0"
+              (click)="generateClusterBinding()"
+            >Generate &amp; copy ClusterBinding</ui5-button>
+          </div>
+
+          @if (editGeneratedYAML()) {
+            <div class="bundle-preview" style="margin-top: 1rem">
+              <div class="preview-header">
+                <ui5-title level="H6">ClusterBinding YAML</ui5-title>
+                <ui5-button design="Transparent" icon="copy" (click)="copyEditYAML()">Copy again</ui5-button>
+              </div>
+              <pre class="bundle-yaml">{{ editGeneratedYAML() }}</pre>
+              <div class="apply-hint">
+                Apply with: <code>kubectl apply -f clusterbinding.yaml</code>
+              </div>
+            </div>
+          }
         </div>
       }
     }
   </div>
-</ui5-dynamic-page>
+
+  <div slot="footer" class="dialog-footer">
+    <ui5-button design="Transparent" (click)="closeEditDialog()">Cancel</ui5-button>
+    @if (!editIsAutoBind()) {
+      <ui5-button
+        design="Emphasized"
+        [disabled]="!canSaveEdit() || saving()"
+        (click)="saveEdit()"
+      >{{ saving() ? 'Saving…' : 'Save' }}</ui5-button>
+    }
+  </div>
+</ui5-dialog>
+
+<!-- ── Delete confirmation dialog ─────────────────────────────────────────────── -->
+<ui5-dialog #deleteDialog header-text="Delete connection" style="width: 420px">
+  <div class="dialog-content">
+    <ui5-text>
+      Delete <strong>{{ deletingClusterName() }}</strong>?
+      The consumer konnector will lose its connection record on the provider side.
+      This action cannot be undone.
+    </ui5-text>
+  </div>
+  <div slot="footer" class="dialog-footer">
+    <ui5-button design="Transparent" (click)="closeDeleteDialog()">Cancel</ui5-button>
+    <ui5-button design="Negative" [disabled]="deleting()" (click)="executeDelete()">
+      {{ deleting() ? 'Deleting…' : 'Delete' }}
+    </ui5-button>
+  </div>
+</ui5-dialog>

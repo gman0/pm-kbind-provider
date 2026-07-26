@@ -1,6 +1,6 @@
 .page-content {
   padding: 1.5rem 2rem;
-  max-width: 860px;
+  max-width: 900px;
 }
 
 .loading-state {
@@ -8,7 +8,7 @@
   text-align: center;
 }
 
-// ── credentials warning ──────────────────────────────────────────────────────
+// ── credentials / info panels ──────────────────────────────────────────────────
 
 .info-panel {
   display: flex;
@@ -23,6 +23,13 @@
     border: 1px solid var(--sapWarningBorderColor, #e9730c);
   }
 
+  &--neutral {
+    background: var(--sapNeutralBackground);
+    border: 1px solid var(--sapNeutralBorderColor, #ccc);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+  }
+
   .panel-icon {
     font-size: 1.5rem;
     flex-shrink: 0;
@@ -35,6 +42,137 @@
     flex-direction: column;
     gap: 0.375rem;
   }
+}
+
+// ── empty state ────────────────────────────────────────────────────────────────
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--sapContent_LabelColor);
+
+  .empty-icon {
+    font-size: 3rem;
+    color: var(--sapContent_NonInteractiveIconColor);
+  }
+}
+
+// ── connections list ───────────────────────────────────────────────────────────
+
+.connections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.connection-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--sapGroup_ContentBackground);
+  border: 1px solid var(--sapGroup_ContentBorderColor);
+  border-left: 4px solid var(--sapNeutralBorderColor, #ccc);
+  border-radius: 0.5rem;
+  transition: border-left-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.connection-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.connection-name {
+  ui5-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.connection-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: var(--sapFontSmallSize, 0.75rem);
+  color: var(--sapContent_LabelColor);
+}
+
+.meta-label {
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+.meta-item {
+  white-space: nowrap;
+}
+
+.connection-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+// ── status badge ───────────────────────────────────────────────────────────────
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--sapFontSmallSize, 0.75rem);
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  white-space: nowrap;
+
+  &.status-connected {
+    color: var(--sapSuccessColor, #107e3e);
+    background: var(--sapSuccessBackground);
+
+    .status-dot { background: var(--sapSuccessColor, #107e3e); }
+  }
+
+  &.status-pending {
+    color: var(--sapNeutralTextColor, #6a6d70);
+    background: var(--sapNeutralBackground);
+
+    .status-dot { background: var(--sapNeutralTextColor, #6a6d70); }
+  }
+
+  &.status-stale {
+    color: var(--sapWarningColor, #e9730c);
+    background: var(--sapWarningBackground);
+
+    .status-dot { background: var(--sapWarningColor, #e9730c); }
+  }
+
+  &.status-unknown {
+    color: var(--sapContent_LabelColor);
+    background: var(--sapNeutralBackground);
+
+    .status-dot { background: var(--sapContent_LabelColor); }
+  }
+}
+
+.status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 // ── form ─────────────────────────────────────────────────────────────────────
@@ -96,13 +234,8 @@
     .api-mode-header {
       background: var(--sapInformationBackground);
 
-      .mode-title {
-        color: var(--sapBrandColor);
-      }
-
-      .mode-arrow {
-        color: var(--sapBrandColor);
-      }
+      .mode-title { color: var(--sapBrandColor); }
+      .mode-arrow { color: var(--sapBrandColor); }
     }
   }
 }
@@ -142,7 +275,7 @@
 
 .api-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
 }
 
@@ -204,21 +337,11 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-
-  .action-hint {
-    font-size: var(--sapFontSmallSize, 0.75rem);
-    color: var(--sapContent_LabelColor);
-
-    &--error {
-      color: var(--sapErrorColor, #bb0000);
-    }
-  }
 }
 
-// ── bundle preview ────────────────────────────────────────────────────────────
+// ── bundle / YAML preview ──────────────────────────────────────────────────────
 
 .bundle-preview {
-  margin-top: 2rem;
   border: 1px solid var(--sapField_BorderColor);
   border-radius: 6px;
   overflow: hidden;
@@ -241,7 +364,7 @@
     background: var(--sapField_Background);
     overflow-x: auto;
     white-space: pre;
-    max-height: 480px;
+    max-height: 320px;
     overflow-y: auto;
   }
 
@@ -252,8 +375,27 @@
     border-top: 1px solid var(--sapSuccessBorderColor, #107e3e);
     color: var(--sapSuccessColor, #107e3e);
 
-    code {
-      font-family: monospace;
-    }
+    code { font-family: monospace; }
   }
+}
+
+// ── dialogs ───────────────────────────────────────────────────────────────────
+
+.dialog-content {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  width: 100%;
+}
+
+.edit-section {
+  display: flex;
+  flex-direction: column;
 }

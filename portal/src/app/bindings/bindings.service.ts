@@ -29,6 +29,34 @@ interface APIBindingListResponse {
   };
 }
 
+export interface KbindClusterCondition {
+  type: string;
+  status: string;
+  reason: string;
+  message: string;
+  lastTransitionTime?: string;
+}
+
+export interface KbindCluster {
+  metadata: { name: string; creationTimestamp?: string };
+  spec?: { apis?: Array<{ name: string }> };
+  status?: {
+    localClusterUID?: string;
+    leaseRef?: { namespace: string; name: string };
+    conditions?: KbindClusterCondition[];
+  };
+}
+
+interface KbindClusterListResponse {
+  kube_bind_provider_platform_mesh_io: {
+    v1alpha1: {
+      KbindClusters: {
+        items: KbindCluster[];
+      };
+    };
+  };
+}
+
 const GET_SECRET_QUERY = `
   query GetSecret($name: String!, $namespace: String!) {
     v1 {
@@ -48,6 +76,26 @@ const LIST_API_BINDINGS_QUERY = `
             metadata { name }
             status {
               boundResources { group resource }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+const LIST_KBIND_CLUSTERS_QUERY = `
+  query ListKbindClusters {
+    kube_bind_provider_platform_mesh_io {
+      v1alpha1 {
+        KbindClusters {
+          items {
+            metadata { name creationTimestamp }
+            spec { apis { name } }
+            status {
+              localClusterUID
+              leaseRef { namespace name }
+              conditions { type status reason message lastTransitionTime }
             }
           }
         }
@@ -88,6 +136,10 @@ export class BindingsService {
     return headers;
   }
 
+  private k8sBaseUrl(graphqlEndpoint: string): string {
+    return graphqlEndpoint.replace(/\/graphql$/, '');
+  }
+
   getSecret(name: string, namespace: string): Observable<Secret | null> {
     return this.getGraphQLConfig().pipe(
       switchMap(({ endpoint, token }) =>
@@ -124,6 +176,112 @@ export class BindingsService {
       catchError((error) => {
         console.error('Error fetching API bindings:', error);
         return of([]);
+      })
+    );
+  }
+
+  listKbindClusters(): Observable<KbindCluster[]> {
+    return this.getGraphQLConfig().pipe(
+      switchMap(({ endpoint, token }) =>
+        from(
+          fetch(endpoint, {
+            method: 'POST',
+            headers: this.buildHeaders(token),
+            body: JSON.stringify({ query: LIST_KBIND_CLUSTERS_QUERY }),
+          }).then((res) => res.json())
+        )
+      ),
+      map((response: { data: KbindClusterListResponse }) =>
+        response.data?.kube_bind_provider_platform_mesh_io?.v1alpha1?.KbindClusters?.items || []
+      ),
+      catchError((error) => {
+        console.error('Error fetching KbindClusters:', error);
+        return of([]);
+      })
+    );
+  }
+
+  createKbindCluster(cluster: KbindCluster): Observable<KbindCluster | null> {
+    return this.getGraphQLConfig().pipe(
+      switchMap(({ endpoint, token }) => {
+        const base = this.k8sBaseUrl(endpoint);
+        const url = `${base}/apis/kube-bind-provider.platform-mesh.io/v1alpha1/kbindclusters`;
+        const body: any = {
+          apiVersion: 'kube-bind-provider.platform-mesh.io/v1alpha1',
+          kind: 'KbindCluster',
+          metadata: { name: cluster.metadata.name },
+          spec: cluster.spec || {},
+        };
+        return from(
+          fetch(url, {
+            method: 'POST',
+            headers: this.buildHeaders(token),
+            body: JSON.stringify(body),
+          }).then((res) => res.json())
+        );
+      }),
+      catchError((error) => {
+        console.error('Error creating KbindCluster:', error);
+        return of(null);
+      })
+    );
+  }
+
+  patchKbindClusterSpec(name: string, apis: Array<{ name: string }>): Observable<KbindCluster | null> {
+    return this.getGraphQLConfig().pipe(
+      switchMap(({ endpoint, token }) => {
+        const base = this.k8sBaseUrl(endpoint);
+        const url = `${base}/apis/kube-bind-provider.platform-mesh.io/v1alpha1/kbindclusters/${name}`;
+        return from(
+          fetch(url, {
+            method: 'PATCH',
+            headers: { ...this.buildHeaders(token), 'Content-Type': 'application/merge-patch+json' },
+            body: JSON.stringify({ spec: { apis } }),
+          }).then((res) => res.json())
+        );
+      }),
+      catchError((error) => {
+        console.error('Error patching KbindCluster:', error);
+        return of(null);
+      })
+    );
+  }
+
+  patchKbindClusterStatus(name: string, localClusterUID: string): Observable<KbindCluster | null> {
+    return this.getGraphQLConfig().pipe(
+      switchMap(({ endpoint, token }) => {
+        const base = this.k8sBaseUrl(endpoint);
+        const url = `${base}/apis/kube-bind-provider.platform-mesh.io/v1alpha1/kbindclusters/${name}/status`;
+        return from(
+          fetch(url, {
+            method: 'PATCH',
+            headers: { ...this.buildHeaders(token), 'Content-Type': 'application/merge-patch+json' },
+            body: JSON.stringify({ status: { localClusterUID } }),
+          }).then((res) => res.json())
+        );
+      }),
+      catchError((error) => {
+        console.error('Error patching KbindCluster status:', error);
+        return of(null);
+      })
+    );
+  }
+
+  deleteKbindCluster(name: string): Observable<boolean> {
+    return this.getGraphQLConfig().pipe(
+      switchMap(({ endpoint, token }) => {
+        const base = this.k8sBaseUrl(endpoint);
+        const url = `${base}/apis/kube-bind-provider.platform-mesh.io/v1alpha1/kbindclusters/${name}`;
+        return from(
+          fetch(url, {
+            method: 'DELETE',
+            headers: this.buildHeaders(token),
+          }).then((res) => res.ok)
+        );
+      }),
+      catchError((error) => {
+        console.error('Error deleting KbindCluster:', error);
+        return of(false);
       })
     );
   }
