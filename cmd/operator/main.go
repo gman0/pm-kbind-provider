@@ -40,6 +40,7 @@ import (
 	mcmanager "sigs.k8s.io/multicluster-runtime/pkg/manager"
 
 	"github.com/platform-mesh/kube-bind-provider/internal/controller"
+	kbpv1alpha1 "github.com/platform-mesh/kube-bind-provider/sdk/apis/kube-bind-provider/v1alpha1"
 )
 
 type operatorOptions struct {
@@ -57,6 +58,7 @@ func init() {
 	utilruntime.Must(rbacv1.AddToScheme(scheme))
 	utilruntime.Must(apisv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apisv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(kbpv1alpha1.AddToScheme(scheme))
 }
 
 func main() {
@@ -113,6 +115,14 @@ func runControllers(ctx context.Context, opts *operatorOptions) error {
 	}
 	if err := issuerController.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setting up issuer controller: %w", err)
+	}
+
+	kbindClusterController, err := controller.NewKbindClusterController()
+	if err != nil {
+		return fmt.Errorf("failed to create kbindcluster controller: %w", err)
+	}
+	if err := kbindClusterController.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("setting up kbindcluster controller: %w", err)
 	}
 
 	return mgr.Start(ctx)

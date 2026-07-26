@@ -34,7 +34,7 @@ export CONTROLLER_GEN # so hack scripts can use it
 
 KCP_APIGEN_VER := 0.32.3
 KCP_APIGEN_BIN := apigen
-KCP_APIGEN_GEN := $(TOOLS_DIR)/$(KCP_APIGEN_BIN)
+KCP_APIGEN_GEN := $(abspath TOOLS_DIR)/$(KCP_APIGEN_BIN)
 export KCP_APIGEN_GEN # so hack scripts can use it
 
 # Binary names

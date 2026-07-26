@@ -1,4 +1,4 @@
-module github.com/platform-mesh/kube-bind-provide/sdk
+module github.com/platform-mesh/kube-bind-provider/sdk
 
 go 1.26.5
 
