@@ -154,10 +154,10 @@ portal-run-detached:
 portal-stop:
 	docker stop kbind-portal
 
-# Refresh the chart's bundled CRDs from the generated sdk CRDs.
+# Refresh the operator chart's bundled CRDs from the generated sdk CRDs.
 .PHONY: helm-sync-crds
 helm-sync-crds: codegen
-	cp sdk/config/crd/core.kbind.io_*.yaml $(CHART)/files/crds/
+	cp sdk/config/crd/kube-bind-provider.platform-mesh.io_*.yaml $(OPERATOR_CHART)/crds/
 
 .PHONY: codegen
 codegen:
@@ -193,6 +193,9 @@ BACKEND_IMAGE_TAG ?= 0.0.0-6ac88b0f68dc5247c773dd6c3b3a0f44a64e9b1b
 # Charts this repo owns. The OCM component embeds them (input: helm) and publishes them as
 # OCI artifacts on `ocm-push`; `helm-push` is the standalone (non-OCM) publish path.
 HELM_CHARTS ?= kbind-portal
+
+# Helm chart that ships the operator and its CRDs.
+OPERATOR_CHART ?= deploy/helm/kbind-provider
 
 ## ocm-build: Build OCM component archive (CTF) from constructor/component-constructor.yaml
 # NOTE: the component references our portal chart as a published OCI artifact, so run
