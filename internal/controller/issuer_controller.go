@@ -63,10 +63,12 @@ func (r *IssuerReconciler) SetupWithManager(mgr mcmanager.Manager) error {
 	return mcbuilder.ControllerManagedBy(mgr).
 		Named("issuer-controller").
 		For(&apisv1alpha2.APIBinding{}).
-		Complete(mcreconcile.Func(r.Reconcile))
+		Complete(r)
 }
 
 func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Request) (ctrl.Result, error) {
+	fmt.Printf("### IssuerReconciler\n")
+
 	log := log.FromContext(ctx).WithValues("cluster", req.ClusterName)
 
 	cl, err := r.manager.GetCluster(ctx, req.ClusterName)

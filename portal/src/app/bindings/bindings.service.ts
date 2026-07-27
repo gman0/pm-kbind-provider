@@ -104,6 +104,22 @@ const LIST_KBIND_CLUSTERS_QUERY = `
   }
 `;
 
+const APPLY_KBIND_CLUSTER_MUTATION = `
+  mutation ApplyKbindCluster($yaml: String!) {
+    applyYaml(yaml: $yaml)
+  }
+`;
+
+const DELETE_KBIND_CLUSTER_MUTATION = `
+  mutation DeleteKbindCluster($name: String!) {
+    kube_bind_provider_platform_mesh_io {
+      v1alpha1 {
+        deleteKbindCluster(name: $name)
+      }
+    }
+  }
+`;
+
 interface GraphQLConfig {
   endpoint: string;
   token: string | null;
@@ -112,6 +128,19 @@ interface GraphQLConfig {
 @Injectable({ providedIn: 'root' })
 export class BindingsService {
   private luigiContextService = inject(LuigiContextService);
+
+  private buildKbindClusterYAML(name: string, apis: Array<{ name: string }>): string {
+    const specLines = apis.length === 0
+      ? ['spec: {}']
+      : ['spec:', '  apis:', ...apis.map(a => `    - name: ${a.name}`)];
+    return [
+      'apiVersion: kube-bind-provider.platform-mesh.io/v1alpha1',
+      'kind: KbindCluster',
+      'metadata:',
+      `  name: ${name}`,
+      ...specLines,
+    ].join('\n');
+  }
 
   private getGraphQLConfig(): Observable<GraphQLConfig> {
     return this.luigiContextService.contextObservable().pipe(
@@ -134,10 +163,6 @@ export class BindingsService {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
-  }
-
-  private k8sBaseUrl(graphqlEndpoint: string): string {
-    return graphqlEndpoint.replace(/\/graphql$/, '');
   }
 
   getSecret(name: string, namespace: string): Observable<Secret | null> {
@@ -204,21 +229,18 @@ export class BindingsService {
   createKbindCluster(cluster: KbindCluster): Observable<KbindCluster | null> {
     return this.getGraphQLConfig().pipe(
       switchMap(({ endpoint, token }) => {
-        const base = this.k8sBaseUrl(endpoint);
-        const url = `${base}/apis/kube-bind-provider.platform-mesh.io/v1alpha1/kbindclusters`;
-        const body: any = {
-          apiVersion: 'kube-bind-provider.platform-mesh.io/v1alpha1',
-          kind: 'KbindCluster',
-          metadata: { name: cluster.metadata.name },
-          spec: cluster.spec || {},
-        };
+        const yaml = this.buildKbindClusterYAML(cluster.metadata.name, cluster.spec?.apis ?? []);
         return from(
-          fetch(url, {
+          fetch(endpoint, {
             method: 'POST',
             headers: this.buildHeaders(token),
-            body: JSON.stringify(body),
+            body: JSON.stringify({ query: APPLY_KBIND_CLUSTER_MUTATION, variables: { yaml } }),
           }).then((res) => res.json())
         );
+      }),
+      map((response: any) => {
+        if (response.errors?.length) throw new Error(response.errors[0].message);
+        return response.data?.applyYaml ?? null;
       }),
       catchError((error) => {
         console.error('Error creating KbindCluster:', error);
@@ -230,15 +252,18 @@ export class BindingsService {
   patchKbindClusterSpec(name: string, apis: Array<{ name: string }>): Observable<KbindCluster | null> {
     return this.getGraphQLConfig().pipe(
       switchMap(({ endpoint, token }) => {
-        const base = this.k8sBaseUrl(endpoint);
-        const url = `${base}/apis/kube-bind-provider.platform-mesh.io/v1alpha1/kbindclusters/${name}`;
+        const yaml = this.buildKbindClusterYAML(name, apis);
         return from(
-          fetch(url, {
-            method: 'PATCH',
-            headers: { ...this.buildHeaders(token), 'Content-Type': 'application/merge-patch+json' },
-            body: JSON.stringify({ spec: { apis } }),
+          fetch(endpoint, {
+            method: 'POST',
+            headers: this.buildHeaders(token),
+            body: JSON.stringify({ query: APPLY_KBIND_CLUSTER_MUTATION, variables: { yaml } }),
           }).then((res) => res.json())
         );
+      }),
+      map((response: any) => {
+        if (response.errors?.length) throw new Error(response.errors[0].message);
+        return response.data?.applyYaml ?? null;
       }),
       catchError((error) => {
         console.error('Error patching KbindCluster:', error);
@@ -247,37 +272,20 @@ export class BindingsService {
     );
   }
 
-  patchKbindClusterStatus(name: string, localClusterUID: string): Observable<KbindCluster | null> {
-    return this.getGraphQLConfig().pipe(
-      switchMap(({ endpoint, token }) => {
-        const base = this.k8sBaseUrl(endpoint);
-        const url = `${base}/apis/kube-bind-provider.platform-mesh.io/v1alpha1/kbindclusters/${name}/status`;
-        return from(
-          fetch(url, {
-            method: 'PATCH',
-            headers: { ...this.buildHeaders(token), 'Content-Type': 'application/merge-patch+json' },
-            body: JSON.stringify({ status: { localClusterUID } }),
-          }).then((res) => res.json())
-        );
-      }),
-      catchError((error) => {
-        console.error('Error patching KbindCluster status:', error);
-        return of(null);
-      })
-    );
-  }
-
   deleteKbindCluster(name: string): Observable<boolean> {
     return this.getGraphQLConfig().pipe(
-      switchMap(({ endpoint, token }) => {
-        const base = this.k8sBaseUrl(endpoint);
-        const url = `${base}/apis/kube-bind-provider.platform-mesh.io/v1alpha1/kbindclusters/${name}`;
-        return from(
-          fetch(url, {
-            method: 'DELETE',
+      switchMap(({ endpoint, token }) =>
+        from(
+          fetch(endpoint, {
+            method: 'POST',
             headers: this.buildHeaders(token),
-          }).then((res) => res.ok)
-        );
+            body: JSON.stringify({ query: DELETE_KBIND_CLUSTER_MUTATION, variables: { name } }),
+          }).then((res) => res.json())
+        )
+      ),
+      map((response: any) => {
+        if (response.errors?.length) throw new Error(response.errors[0].message);
+        return response.data?.kube_bind_provider_platform_mesh_io?.v1alpha1?.deleteKbindCluster === true;
       }),
       catchError((error) => {
         console.error('Error deleting KbindCluster:', error);

@@ -184,11 +184,11 @@ export class ConnectClusterComponent implements OnInit {
     this.hideSystemAPIs.set(true);
     this.generatedBundle.set('');
     this.creating.set(false);
-    this.createDialogRef.nativeElement.show();
+    this.createDialogRef.nativeElement.open = true;
   }
 
   closeCreateDialog(): void {
-    this.createDialogRef.nativeElement.close();
+    this.createDialogRef.nativeElement.open = false;
   }
 
   generateAndCreate(): void {
@@ -260,11 +260,11 @@ export class ConnectClusterComponent implements OnInit {
     this.editHideSystemAPIs.set(true);
     this.editGeneratedYAML.set('');
     this.saving.set(false);
-    this.editDialogRef.nativeElement.show();
+    this.editDialogRef.nativeElement.open = true;
   }
 
   closeEditDialog(): void {
-    this.editDialogRef.nativeElement.close();
+    this.editDialogRef.nativeElement.open = false;
   }
 
   onEditAPITileClick(api: string): void {
@@ -330,11 +330,11 @@ ${apisYaml}`;
   openDeleteDialog(name: string): void {
     this.deletingClusterName.set(name);
     this.deleting.set(false);
-    this.deleteDialogRef.nativeElement.show();
+    this.deleteDialogRef.nativeElement.open = true;
   }
 
   closeDeleteDialog(): void {
-    this.deleteDialogRef.nativeElement.close();
+    this.deleteDialogRef.nativeElement.open = false;
   }
 
   executeDelete(): void {

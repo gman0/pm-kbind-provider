@@ -93,10 +93,9 @@ func runControllers(ctx context.Context, opts *operatorOptions) error {
 		return fmt.Errorf("loading kcp kubeconfig: %w", err)
 	}
 
-	fmt.Printf("\n\n\n####\n\n\n")
-
 	provider, err := apiexport.New(kcpConfig, opts.endpointSlice, apiexport.Options{
-		Scheme: scheme,
+		ObjectToWatch: &apisv1alpha2.APIBinding{},
+		Scheme:        scheme,
 	})
 	if err != nil {
 		return fmt.Errorf("creating apiexport provider: %w", err)

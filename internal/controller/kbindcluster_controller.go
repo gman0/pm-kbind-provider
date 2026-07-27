@@ -87,31 +87,42 @@ func (r *KbindClusterReconciler) SetupWithManager(mgr mcmanager.Manager) error {
 
 func mapLease(clusterName multicluster.ClusterName, cl cluster.Cluster) handler.TypedEventHandler[client.Object, mcreconcile.Request] {
 	return mchandler.TypedEnqueueRequestsFromMapFuncWithClusterPreservation(func(ctx context.Context, obj client.Object) []mcreconcile.Request {
+		fmt.Printf("### mapLease 1\n")
 		lease, ok := obj.(*coordinationv1.Lease)
 		if !ok {
+			fmt.Printf("### mapLease 2\n")
 			return nil
 		}
 		if lease.Spec.HolderIdentity == nil || *lease.Spec.HolderIdentity == "" {
-			return nil
-		}
-		uid := *lease.Spec.HolderIdentity
-
-		var list kbpv1alpha1.KbindClusterList
-		if err := cl.GetClient().List(ctx, &list); err != nil {
-			log.FromContext(ctx).Error(err, "listing KbindClusters for Lease event")
+			fmt.Printf("### mapLease 3\n")
 			return nil
 		}
 
-		var reqs []mcreconcile.Request
-		for i := range list.Items {
-			if list.Items[i].Status.LocalClusterUID == uid {
-				reqs = append(reqs, mcreconcile.Request{
-					ClusterName: clusterName,
-					Request:     reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&list.Items[i])},
-				})
-			}
+		if lease.Annotations == nil {
+			return nil
 		}
-		return reqs
+		if lease.Annotations["core.kbind.io/consumer-cluster-uid"] == "" {
+			return nil
+		}
+		kbcName := lease.Annotations["core.kbind.io/connection"]
+		if kbcName == "" {
+			return nil
+		}
+
+		var kbc kbpv1alpha1.KbindCluster
+		if err := cl.GetClient().Get(ctx, types.NamespacedName{Name: kbcName}, &kbc); err != nil {
+			log.FromContext(ctx).Error(err, "getting KbindCluster for Lease event")
+			fmt.Printf("### mapLease 4\n")
+			return nil
+		}
+
+		fmt.Printf("### mapLease 6\n")
+		return []mcreconcile.Request{
+			{
+				ClusterName: clusterName,
+				Request:     reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&kbc)},
+			},
+		}
 	})
 }
 
@@ -120,16 +131,19 @@ func mapLease(clusterName multicluster.ClusterName, cl cluster.Cluster) handler.
 // Ready conditions accordingly. It requeues every leaseDurationSeconds so a
 // silently-dead konnector (no Lease delete event) is eventually detected.
 func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.Request) (ctrl.Result, error) {
+	fmt.Printf("### KbindClusterReconciler.Reconcile 1\n")
 	log := log.FromContext(ctx)
 
 	cl, err := r.manager.GetCluster(ctx, req.ClusterName)
 	if err != nil {
+		fmt.Printf("### KbindClusterReconciler.Reconcile 2\n")
 		return ctrl.Result{}, fmt.Errorf("getting cluster %s: %w", req.ClusterName, err)
 	}
 	c := cl.GetClient()
 
 	kbc := &kbpv1alpha1.KbindCluster{}
 	if err := c.Get(ctx, req.NamespacedName, kbc); err != nil {
+		fmt.Printf("### KbindClusterReconciler.Reconcile 3\n")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -139,16 +153,19 @@ func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.
 	origConds := append([]metav1.Condition(nil), kbc.Status.Conditions...)
 
 	if err := r.reconcileStatus(ctx, c, kbc); err != nil {
+		fmt.Printf("### KbindClusterReconciler.Reconcile 4\n")
 		return ctrl.Result{}, err
 	}
 
 	if !statusEqual(origLocalUID, origLeaseRef, origConds, kbc.Status) {
 		if err := c.Status().Update(ctx, kbc); err != nil {
+			fmt.Printf("### KbindClusterReconciler.Reconcile 5\n")
 			log.Error(err, "updating KbindCluster status")
 			return ctrl.Result{}, err
 		}
 	}
 
+	fmt.Printf("### KbindClusterReconciler.Reconcile 6\n")
 	return ctrl.Result{RequeueAfter: leaseDurationSeconds * time.Second}, nil
 }
 
