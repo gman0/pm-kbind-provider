@@ -20,15 +20,14 @@ import (
 	"context"
 	"fmt"
 
-	confighelpers "github.com/kcp-dev/kcp/config/helpers"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	providerconfig "github.com/platform-mesh/kube-bind-provider/config/provider"
+	"github.com/platform-mesh/kube-bind-provider/internal/bootstrap"
 )
 
 type initOptions struct {
@@ -67,8 +66,7 @@ func (o *initOptions) run(ctx context.Context) error {
 	}
 
 	log.Info("bootstrapping provider resources")
-	if err := confighelpers.Bootstrap(ctx, discoveryClient, dynamicClient,
-		sets.New[string](), providerconfig.FS, confighelpers.ReplaceOption()); err != nil {
+	if err := bootstrap.Bootstrap(ctx, discoveryClient, dynamicClient, providerconfig.FS); err != nil {
 		return fmt.Errorf("bootstrapping provider resources: %w", err)
 	}
 
