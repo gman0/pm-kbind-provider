@@ -72,8 +72,8 @@ type APIRef struct {
 type KbindClusterStatus struct {
 	// localClusterUID is the consumer cluster's kube-system namespace UID —
 	// identical to Connection.status.localClusterUID on the consumer side.
-	// Set by the portal at bundle-generation time (the portal reads it from
-	// the consumer workspace's kube-system namespace). Immutable once set.
+	// Set by the konnector when it first establishes its heartbeat Lease on the
+	// provider (the value equals Lease.spec.holderIdentity). Immutable once set.
 	// The KbindClusterReconciler uses this to match Leases to KbindClusters:
 	// a Lease whose spec.holderIdentity equals this UID belongs to this bundle's
 	// consumer.

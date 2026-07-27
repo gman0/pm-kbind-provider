@@ -69,7 +69,7 @@
 </ui5-dynamic-page>
 
 <!-- ── Create dialog ─────────────────────────────────────────────────────────── -->
-<ui5-dialog #createDialog header-text="Add connection" style="width: 680px">
+<ui5-dialog #createDialog header-text="Add connection" style="width: 860px">
   <div class="dialog-content">
     @if (!credentialsReady()) {
       <div class="info-panel warning-panel" style="margin-bottom: 1.25rem">
@@ -175,7 +175,7 @@
 </ui5-dialog>
 
 <!-- ── Edit dialog ────────────────────────────────────────────────────────────── -->
-<ui5-dialog #editDialog [attr.header-text]="'Edit — ' + (editingCluster()?.metadata?.name ?? '')" style="width: 680px">
+<ui5-dialog #editDialog [attr.header-text]="'Edit — ' + (editingCluster()?.metadata?.name ?? '')" style="width: 860px">
   <div class="dialog-content">
     @if (editingCluster(); as cluster) {
       @if (editIsAutoBind()) {
