@@ -94,6 +94,13 @@ export class ConnectClusterComponent implements OnInit {
       this.credentialsReady()
   );
 
+  canSave = computed(
+    () =>
+      this.bundleNameValid() &&
+      !!this.generatedBundle() &&
+      !this.creating()
+  );
+
   // ── edit dialog state ────────────────────────────────────────────────────────
 
   editingCluster = signal<KbindCluster | null>(null);
@@ -191,7 +198,7 @@ export class ConnectClusterComponent implements OnInit {
     this.createDialogRef.nativeElement.open = false;
   }
 
-  generateAndCreate(): void {
+  generateBundle(): void {
     const name = this.bundleName().trim();
     const autoBind = this.autoBind();
     const apis = [...this.selectedAPIs()].sort();
@@ -200,9 +207,14 @@ export class ConnectClusterComponent implements OnInit {
 
     const bundle = this.assembleBundle(name, apis, kubeconfig, autoBind);
     this.generatedBundle.set(bundle);
-    this.copyToClipboard(bundle, 'Bundle copied to clipboard');
+  }
 
-    // Persist to API
+  saveConnection(): void {
+    const name = this.bundleName().trim();
+    const autoBind = this.autoBind();
+    const apis = [...this.selectedAPIs()].sort();
+    if (!name || !this.generatedBundle()) return;
+
     this.creating.set(true);
     const apiRefs = autoBind ? [] : apis.map(a => ({ name: a }));
     this.bindingsService.createKbindCluster({

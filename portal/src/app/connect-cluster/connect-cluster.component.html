@@ -148,11 +148,19 @@
         </div>
       </div>
 
+      <div class="action-row">
+        <ui5-button
+          design="Default"
+          [disabled]="!canGenerate()"
+          (click)="generateBundle()"
+        >Generate bundle</ui5-button>
+      </div>
+
       @if (generatedBundle()) {
         <div class="bundle-preview">
           <div class="preview-header">
             <ui5-title level="H6">Generated bundle</ui5-title>
-            <ui5-button design="Transparent" icon="copy" (click)="copyBundle()">Copy again</ui5-button>
+            <ui5-button design="Transparent" icon="copy" (click)="copyBundle()">Copy</ui5-button>
           </div>
           <pre class="bundle-yaml">{{ generatedBundle() }}</pre>
           <div class="apply-hint">
@@ -167,10 +175,9 @@
     <ui5-button design="Transparent" (click)="closeCreateDialog()">Cancel</ui5-button>
     <ui5-button
       design="Emphasized"
-      icon="copy"
-      [disabled]="!canGenerate() || creating()"
-      (click)="generateAndCreate()"
-    >{{ creating() ? 'Saving…' : 'Copy bundle &amp; save' }}</ui5-button>
+      [disabled]="!canSave() || creating()"
+      (click)="saveConnection()"
+    >{{ creating() ? 'Saving…' : 'Save connection' }}</ui5-button>
   </div>
 </ui5-dialog>
 
