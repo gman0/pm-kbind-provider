@@ -36,7 +36,6 @@
       } @else {
         <div class="connections-list">
           @for (cluster of kbindClusters(); track cluster.metadata.name) {
-            @let hb = getHeartbeatStatus(cluster);
             <div class="connection-row">
               <div class="connection-main">
                 <div class="connection-name">
@@ -51,12 +50,6 @@
                     <span class="meta-label">Last heartbeat:</span>
                     {{ getLastHeartbeat(cluster) }}
                   </span>
-                  @if (hb) {
-                    <span class="meta-item" [class.heartbeat-overdue]="hb.overdue">
-                      <span class="meta-label">{{ hb.label }}:</span>
-                      {{ hb.countdown }}
-                    </span>
-                  }
                   <span class="meta-item">
                     <span class="meta-label">APIs:</span>
                     {{ getAPISummary(cluster) }}

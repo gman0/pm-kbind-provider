@@ -29,24 +29,6 @@ interface APIBindingListResponse {
   };
 }
 
-export interface Lease {
-  metadata: { name: string };
-  spec?: {
-    renewTime?: string;
-    leaseDurationSeconds?: number;
-  };
-}
-
-interface LeaseListResponse {
-  coordination_k8s_io: {
-    v1: {
-      Leases: {
-        items: Lease[];
-      };
-    };
-  };
-}
-
 export interface KbindClusterCondition {
   type: string;
   status: string;
@@ -115,21 +97,6 @@ const LIST_KBIND_CLUSTERS_QUERY = `
               leaseRef { namespace name }
               conditions { type status reason message lastTransitionTime }
             }
-          }
-        }
-      }
-    }
-  }
-`;
-
-const LIST_LEASES_QUERY = `
-  query ListLeases($namespace: String!) {
-    coordination_k8s_io {
-      v1 {
-        Leases(namespace: $namespace) {
-          items {
-            metadata { name }
-            spec { renewTime leaseDurationSeconds }
           }
         }
       }
@@ -254,27 +221,6 @@ export class BindingsService {
       ),
       catchError((error) => {
         console.error('Error fetching KbindClusters:', error);
-        return of([]);
-      })
-    );
-  }
-
-  listLeases(namespace: string): Observable<Lease[]> {
-    return this.getGraphQLConfig().pipe(
-      switchMap(({ endpoint, token }) =>
-        from(
-          fetch(endpoint, {
-            method: 'POST',
-            headers: this.buildHeaders(token),
-            body: JSON.stringify({ query: LIST_LEASES_QUERY, variables: { namespace } }),
-          }).then((res) => res.json())
-        )
-      ),
-      map((response: { data: LeaseListResponse }) =>
-        response.data?.coordination_k8s_io?.v1?.Leases?.items || []
-      ),
-      catchError((error) => {
-        console.error('[kbind-portal] lease fetch error:', error);
         return of([]);
       })
     );
