@@ -1,4 +1,4 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import * as LuigiClient from '@luigi-project/client';
 import {
   ButtonComponent,
@@ -12,7 +12,7 @@ import {
   ToolbarButtonComponent,
   ToolbarComponent,
 } from '@ui5/webcomponents-ngx';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of, map, switchMap } from 'rxjs';
 
 import '@ui5/webcomponents-icons/dist/accept.js';
 import '@ui5/webcomponents-icons/dist/add.js';
@@ -25,7 +25,7 @@ import '@ui5/webcomponents-icons/dist/slim-arrow-down.js';
 import '@ui5/webcomponents-icons/dist/slim-arrow-right.js';
 import '@ui5/webcomponents-icons/dist/warning.js';
 
-import { BindingsService, KbindCluster } from '../bindings/bindings.service';
+import { BindingsService, KbindCluster, Lease } from '../bindings/bindings.service';
 
 const SYSTEM_GROUP_SUFFIXES = ['.kcp.io', '.platform-mesh.io'];
 
@@ -55,7 +55,7 @@ const K8S_NAME_RE = /^[a-z0-9]([a-z0-9-]{0,251}[a-z0-9])?$/;
   templateUrl: './connect-cluster.component.html',
   styleUrl: './connect-cluster.component.scss',
 })
-export class ConnectClusterComponent implements OnInit {
+export class ConnectClusterComponent implements OnInit, OnDestroy {
   private bindingsService = inject(BindingsService);
 
   @ViewChild('createDialog') createDialogRef!: ElementRef;
@@ -69,6 +69,9 @@ export class ConnectClusterComponent implements OnInit {
   kbindClusters = signal<KbindCluster[]>([]);
   private allResourcePairs = signal<{ group: string; resource: string }[]>([]);
   private kubeconfig = signal<string | null>(null);
+  private leasesByName = signal<Map<string, Lease>>(new Map());
+  private tick = signal(Date.now());
+  private tickInterval: ReturnType<typeof setInterval> | null = null;
 
   availableAPIs = computed(() => {
     const pairs = this.allResourcePairs();
@@ -132,10 +135,15 @@ export class ConnectClusterComponent implements OnInit {
   // ── lifecycle ────────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    this.tickInterval = setInterval(() => this.tick.set(Date.now()), 1000);
     LuigiClient.addInitListener(() => {
       LuigiClient.uxManager().showLoadingIndicator();
       this.loadData();
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.tickInterval !== null) clearInterval(this.tickInterval);
   }
 
   loadData(): void {
@@ -145,8 +153,18 @@ export class ConnectClusterComponent implements OnInit {
       apis: this.bindingsService.listAPIBindings(),
       secret: this.bindingsService.getSecret('kbind-kubeconfig', 'kbind'),
       clusters: this.bindingsService.listKbindClusters(),
-    }).subscribe({
-      next: ({ apis, secret, clusters }) => {
+    }).pipe(
+      switchMap(({ apis, secret, clusters }) => {
+        const namespaces = [...new Set(
+          clusters.map(c => c.status?.leaseRef?.namespace).filter((ns): ns is string => !!ns)
+        )];
+        const leases$ = namespaces.length > 0
+          ? forkJoin(namespaces.map(ns => this.bindingsService.listLeases(ns))).pipe(map(r => r.flat()))
+          : of([] as Lease[]);
+        return leases$.pipe(map(leases => ({ apis, secret, clusters, leases })));
+      })
+    ).subscribe({
+      next: ({ apis, secret, clusters, leases }) => {
         const allPairs: { group: string; resource: string }[] = [];
         for (const binding of apis) {
           for (const res of binding.status?.boundResources ?? []) {
@@ -169,6 +187,7 @@ export class ConnectClusterComponent implements OnInit {
           this.credentialsReady.set(false);
         }
 
+        this.leasesByName.set(new Map(leases.map(l => [l.metadata.name, l])));
         this.kbindClusters.set(clusters);
         this.loading.set(false);
         LuigiClient.uxManager().hideLoadingIndicator();
@@ -383,9 +402,39 @@ export class ConnectClusterComponent implements OnInit {
   }
 
   getLastHeartbeat(cluster: KbindCluster): string {
+    const now = this.tick();
     const cond = this.getConnectedCondition(cluster);
-    if (!cond?.lastTransitionTime) return '—';
-    return this.formatRelativeTime(cond.lastTransitionTime);
+    if (!cond) return '—';
+
+    if (cond.status === 'True') {
+      const renewTime = this.getLease(cluster)?.spec?.renewTime;
+      if (renewTime) return this.formatRelativeTime(renewTime, now);
+    }
+
+    return cond.lastTransitionTime ? this.formatRelativeTime(cond.lastTransitionTime, now) : '—';
+  }
+
+  getHeartbeatStatus(cluster: KbindCluster): { countdown: string; label: string; overdue: boolean } | null {
+    const cond = this.getConnectedCondition(cluster);
+    if (cond?.status !== 'True') return null;
+    const lease = this.getLease(cluster);
+    if (!lease?.spec?.renewTime) return null;
+
+    const now = this.tick();
+    const renewMs = new Date(lease.spec.renewTime).getTime();
+    const durationMs = (lease.spec.leaseDurationSeconds ?? 60) * 1000;
+    const delta = renewMs + durationMs - now;
+
+    if (delta > 0) {
+      return { label: 'Next in', countdown: `${Math.ceil(delta / 1000)}s`, overdue: false };
+    }
+    const overdueMs = -delta;
+    return { label: 'Overdue by', countdown: `${Math.floor(overdueMs / 1000)}s`, overdue: overdueMs > 10_000 };
+  }
+
+  private getLease(cluster: KbindCluster): Lease | undefined {
+    const name = cluster.status?.leaseRef?.name;
+    return name ? this.leasesByName().get(name) : undefined;
   }
 
   getAPISummary(cluster: KbindCluster): string {
@@ -399,8 +448,8 @@ export class ConnectClusterComponent implements OnInit {
     return !cluster.spec?.apis || cluster.spec.apis.length === 0;
   }
 
-  private formatRelativeTime(iso: string): string {
-    const delta = Date.now() - new Date(iso).getTime();
+  private formatRelativeTime(iso: string, now = Date.now()): string {
+    const delta = now - new Date(iso).getTime();
     const s = Math.floor(delta / 1000);
     if (s < 60) return `${s}s ago`;
     const m = Math.floor(s / 60);

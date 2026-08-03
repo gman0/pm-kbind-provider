@@ -17,3 +17,6 @@
   - group: "rbac.authorization.k8s.io"
     resource: clusterrolebindings
     verbs: ["*"]
+  - group: coordination.k8s.io
+    resource: leases
+    verbs: ["*"]

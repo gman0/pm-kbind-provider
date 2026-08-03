@@ -118,6 +118,11 @@
 
 .meta-item {
   white-space: nowrap;
+
+  &.heartbeat-overdue {
+    color: var(--sapErrorColor, #bb0000);
+    font-weight: 600;
+  }
 }
 
 .connection-actions {
