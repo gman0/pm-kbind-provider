@@ -178,14 +178,15 @@
     </div>
   </div>
 
-  <div slot="footer" class="dialog-footer">
-    <ui5-button design="Transparent" (click)="closeCreateDialog()">Cancel</ui5-button>
+  <ui5-bar slot="footer" design="Footer">
+    <ui5-button slot="endContent" design="Transparent" (click)="closeCreateDialog()">Cancel</ui5-button>
     <ui5-button
+      slot="endContent"
       design="Emphasized"
       [disabled]="!canSave() || creating()"
       (click)="saveConnection()"
     >{{ creating() ? 'Saving…' : 'Save connection' }}</ui5-button>
-  </div>
+  </ui5-bar>
 </ui5-dialog>
 
 <!-- ── Edit dialog ────────────────────────────────────────────────────────────── -->
@@ -255,16 +256,17 @@
     }
   </div>
 
-  <div slot="footer" class="dialog-footer">
-    <ui5-button design="Transparent" (click)="closeEditDialog()">Cancel</ui5-button>
+  <ui5-bar slot="footer" design="Footer">
+    <ui5-button slot="endContent" design="Transparent" (click)="closeEditDialog()">Cancel</ui5-button>
     @if (!editIsAutoBind()) {
       <ui5-button
+        slot="endContent"
         design="Emphasized"
         [disabled]="!canSaveEdit() || saving()"
         (click)="saveEdit()"
       >{{ saving() ? 'Saving…' : 'Save' }}</ui5-button>
     }
-  </div>
+  </ui5-bar>
 </ui5-dialog>
 
 <!-- ── Delete confirmation dialog ─────────────────────────────────────────────── -->
@@ -276,10 +278,10 @@
       This action cannot be undone.
     </ui5-text>
   </div>
-  <div slot="footer" class="dialog-footer">
-    <ui5-button design="Transparent" (click)="closeDeleteDialog()">Cancel</ui5-button>
-    <ui5-button design="Negative" [disabled]="deleting()" (click)="executeDelete()">
+  <ui5-bar slot="footer" design="Footer">
+    <ui5-button slot="endContent" design="Transparent" (click)="closeDeleteDialog()">Cancel</ui5-button>
+    <ui5-button slot="endContent" design="Negative" [disabled]="deleting()" (click)="executeDelete()">
       {{ deleting() ? 'Deleting…' : 'Delete' }}
     </ui5-button>
-  </div>
+  </ui5-bar>
 </ui5-dialog>
