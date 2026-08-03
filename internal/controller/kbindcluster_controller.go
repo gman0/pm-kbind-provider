@@ -165,12 +165,17 @@ func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.
 	origLeaseRef := kbc.Status.LeaseRef
 	origLocalUID := kbc.Status.LocalClusterUID
 	origConds := append([]metav1.Condition(nil), kbc.Status.Conditions...)
+	var origLastHeartbeat *metav1.Time
+	if kbc.Status.LastHeartbeatTime != nil {
+		t := *kbc.Status.LastHeartbeatTime
+		origLastHeartbeat = &t
+	}
 
 	if err := r.reconcileStatus(ctx, c, kbc); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if !statusEqual(origLocalUID, origLeaseRef, origConds, kbc.Status) {
+	if !statusEqual(origLocalUID, origLeaseRef, origConds, origLastHeartbeat, kbc.Status) {
 		if err := c.Status().Update(ctx, kbc); err != nil {
 			log.Error(err, "updating KbindCluster status")
 			return ctrl.Result{}, err
@@ -221,6 +226,10 @@ func (r *KbindClusterReconciler) reconcileStatus(ctx context.Context, c client.C
 	}
 
 	kbc.Status.LeaseRef = &kbpv1alpha1.LocalLeaseRef{Namespace: leaseNamespace, Name: lease.Name}
+	if lease.Spec.RenewTime != nil {
+		t := metav1.NewTime(lease.Spec.RenewTime.Time)
+		kbc.Status.LastHeartbeatTime = &t
+	}
 	if isLeaseConnected(lease) {
 		setCondition(kbc, condConnected, metav1.ConditionTrue, reasonLeaseRenewed, "konnector is heartbeating")
 		setCondition(kbc, condReady, metav1.ConditionTrue, reasonAsExpected, "konnector is connected")
@@ -269,11 +278,14 @@ func setCondition(kbc *kbpv1alpha1.KbindCluster, condType string, status metav1.
 
 // statusEqual compares the reconciler-managed status fields, ignoring condition
 // timestamps so a no-op reconcile does not trigger a spurious status update.
-func statusEqual(origLocalUID string, origLeaseRef *kbpv1alpha1.LocalLeaseRef, origConds []metav1.Condition, cur kbpv1alpha1.KbindClusterStatus) bool {
+func statusEqual(origLocalUID string, origLeaseRef *kbpv1alpha1.LocalLeaseRef, origConds []metav1.Condition, origLastHeartbeat *metav1.Time, cur kbpv1alpha1.KbindClusterStatus) bool {
 	if origLocalUID != cur.LocalClusterUID {
 		return false
 	}
 	if !leaseRefEqual(origLeaseRef, cur.LeaseRef) {
+		return false
+	}
+	if !timeEqual(origLastHeartbeat, cur.LastHeartbeatTime) {
 		return false
 	}
 	for _, ct := range []string{condConnected, condReady} {
@@ -284,6 +296,16 @@ func statusEqual(origLocalUID string, origLeaseRef *kbpv1alpha1.LocalLeaseRef, o
 		}
 	}
 	return true
+}
+
+func timeEqual(a, b *metav1.Time) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.Equal(b)
 }
 
 func leaseRefEqual(a, b *kbpv1alpha1.LocalLeaseRef) bool {

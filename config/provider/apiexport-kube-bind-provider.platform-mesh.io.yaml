@@ -2,7 +2,7 @@ apiVersion: apis.kcp.io/v1alpha2
 kind: APIExport
 metadata:
   labels:
-    ui.platform-mesh.io/content-for: kube-bind-provider.platform-mesh.io
+    ui.platform-mesh.io/content-for: kbind.platform-mesh.io
   name: kube-bind-provider.platform-mesh.io
 spec:
   permissionClaims:
@@ -29,7 +29,7 @@ spec:
   resources:
   - group: kube-bind-provider.platform-mesh.io
     name: kbindclusters
-    schema: v260727-9d203d0.kbindclusters.kube-bind-provider.platform-mesh.io
+    schema: v260803-a524d45.kbindclusters.kube-bind-provider.platform-mesh.io
     storage:
       crd: {}
 status: {}

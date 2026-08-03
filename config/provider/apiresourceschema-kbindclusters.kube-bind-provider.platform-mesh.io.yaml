@@ -1,7 +1,7 @@
 apiVersion: apis.kcp.io/v1alpha1
 kind: APIResourceSchema
 metadata:
-  name: v260727-9d203d0.kbindclusters.kube-bind-provider.platform-mesh.io
+  name: v260803-a524d45.kbindclusters.kube-bind-provider.platform-mesh.io
 spec:
   group: kube-bind-provider.platform-mesh.io
   names:
@@ -22,6 +22,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
       type: string
+    - jsonPath: .status.lastHeartbeatTime
+      name: Last Heartbeat
+      type: date
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -145,6 +148,14 @@ spec:
               x-kubernetes-list-map-keys:
               - type
               x-kubernetes-list-type: map
+            lastHeartbeatTime:
+              description: |-
+                lastHeartbeatTime is the most recent time the konnector renewed its
+                heartbeat Lease on the provider cluster. Updated by the reconciler each
+                time it observes a fresh Lease.renewTime. Nil until the consumer first
+                connects.
+              format: date-time
+              type: string
             leaseRef:
               description: |-
                 leaseRef points at the coordination.k8s.io/Lease maintained by the
@@ -168,8 +179,8 @@ spec:
               description: |-
                 localClusterUID is the consumer cluster's kube-system namespace UID —
                 identical to Connection.status.localClusterUID on the consumer side.
-                Set by the portal at bundle-generation time (the portal reads it from
-                the consumer workspace's kube-system namespace). Immutable once set.
+                Set by the konnector when it first establishes its heartbeat Lease on the
+                provider (the value equals Lease.spec.holderIdentity). Immutable once set.
                 The KbindClusterReconciler uses this to match Leases to KbindClusters:
                 a Lease whose spec.holderIdentity equals this UID belongs to this bundle's
                 consumer.

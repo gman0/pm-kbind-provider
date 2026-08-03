@@ -46,6 +46,12 @@
                     <span class="status-dot"></span>
                     {{ getStatusLabel(cluster) }}
                   </span>
+                  @if (getLastHeartbeat(cluster); as heartbeat) {
+                    <span class="meta-item">
+                      <span class="meta-label">Last heartbeat:</span>
+                      {{ heartbeat }}
+                    </span>
+                  }
                   <span class="meta-item">
                     <span class="meta-label">APIs:</span>
                     {{ getAPISummary(cluster) }}

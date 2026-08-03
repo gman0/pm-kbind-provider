@@ -80,7 +80,7 @@ $(CONTROLLER_GEN):
 	@UNCOMPRESSED=true hack/uget.sh https://github.com/kubernetes-sigs/controller-tools/releases/download/{VERSION}/controller-gen-{GOOS}-{GOARCH} ${CONTROLLER_GEN_BIN} $(CONTROLLER_GEN_VER) controller-gen*
 
 $(KCP_APIGEN_GEN):
-	@hack/uget.sh https://github.com/kcp-dev/kcp/releases/download/v{VERSION}/apigen_{VERSION}_{GOOS}_{GOARCH}.tar.gz $(KCP_APIGEN_BIN) $(KCP_APIGEN_VER) apigen*
+	@hack/uget.sh https://github.com/kcp-dev/kcp/releases/download/v{VERSION}/apigen_{VERSION}_{GOOS}_{GOARCH}.tar.gz $(KCP_APIGEN_BIN) $(KCP_APIGEN_VER) bin/apigen*
 
 $(YAML_PATCH):
 	@GO_MODULE=true hack/uget.sh github.com/pivotal-cf/yaml-patch/cmd/yaml-patch $(YAML_PATCH_BIN) $(YAML_PATCH_VER)

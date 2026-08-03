@@ -31,6 +31,7 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Connected",type=string,JSONPath=`.status.conditions[?(@.type=="Connected")].status`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+// +kubebuilder:printcolumn:name="Last Heartbeat",type=date,JSONPath=`.status.lastHeartbeatTime`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 type KbindCluster struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -89,6 +90,14 @@ type KbindClusterStatus struct {
 	//
 	// +optional
 	LeaseRef *LocalLeaseRef `json:"leaseRef,omitempty"`
+
+	// lastHeartbeatTime is the most recent time the konnector renewed its
+	// heartbeat Lease on the provider cluster. Updated by the reconciler each
+	// time it observes a fresh Lease.renewTime. Nil until the consumer first
+	// connects.
+	//
+	// +optional
+	LastHeartbeatTime *metav1.Time `json:"lastHeartbeatTime,omitempty"`
 
 	// conditions:
 	//   Connected — a Lease with matching holderIdentity exists and renewTime

@@ -393,6 +393,22 @@ export class ConnectClusterComponent implements OnInit {
     return 'status-unknown';
   }
 
+  getLastHeartbeat(cluster: KbindCluster): string | null {
+    const t = cluster.status?.lastHeartbeatTime;
+    return t ? this.formatRelativeTime(t) : null;
+  }
+
+  private formatRelativeTime(iso: string): string {
+    const delta = Date.now() - new Date(iso).getTime();
+    const s = Math.floor(delta / 1000);
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+
   getAPISummary(cluster: KbindCluster): string {
     const apis = cluster.spec?.apis;
     if (!apis || apis.length === 0) return 'All APIs';

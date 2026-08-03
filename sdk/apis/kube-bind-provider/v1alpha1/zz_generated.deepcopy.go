@@ -111,6 +111,10 @@ func (in *KbindClusterStatus) DeepCopyInto(out *KbindClusterStatus) {
 		*out = new(LocalLeaseRef)
 		**out = **in
 	}
+	if in.LastHeartbeatTime != nil {
+		in, out := &in.LastHeartbeatTime, &out.LastHeartbeatTime
+		*out = (*in).DeepCopy()
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))

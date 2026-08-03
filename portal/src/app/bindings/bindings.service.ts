@@ -42,6 +42,7 @@ export interface KbindCluster {
   spec?: { apis?: Array<{ name: string }> };
   status?: {
     localClusterUID?: string;
+    lastHeartbeatTime?: string;
     conditions?: KbindClusterCondition[];
   };
 }
@@ -93,6 +94,7 @@ const LIST_KBIND_CLUSTERS_QUERY = `
             spec { apis { name } }
             status {
               localClusterUID
+              lastHeartbeatTime
               conditions { type status reason message lastTransitionTime }
             }
           }
