@@ -121,7 +121,7 @@ export class ConnectClusterComponent implements OnInit {
   });
 
   canSaveEdit = computed(
-    () => !this.editIsAutoBind() && this.editSelectedAPIs().size > 0
+    () => !this.editIsAutoBind() && this.editSelectedAPIs().size > 0 && !!this.editGeneratedYAML()
   );
 
   // ── delete dialog state ──────────────────────────────────────────────────────
@@ -270,8 +270,15 @@ export class ConnectClusterComponent implements OnInit {
     const preSelected = new Set((cluster.spec?.apis ?? []).map(a => a.name));
     this.editSelectedAPIs.set(preSelected);
     this.editHideSystemAPIs.set(true);
-    this.editGeneratedYAML.set('');
     this.saving.set(false);
+
+    const kubeconfig = this.kubeconfig();
+    const autoBind = !cluster.spec?.apis || cluster.spec.apis.length === 0;
+    const apis = [...preSelected].sort();
+    this.editGeneratedYAML.set(
+      kubeconfig ? this.assembleBundle(cluster.metadata.name, apis, kubeconfig, autoBind) : ''
+    );
+
     this.editDialogRef.nativeElement.open = true;
   }
 
@@ -290,23 +297,12 @@ export class ConnectClusterComponent implements OnInit {
     this.editHideSystemAPIs.set((event.target as any).checked as boolean);
   }
 
-  generateClusterBinding(): void {
+  generateEditBundle(): void {
     const cluster = this.editingCluster();
-    if (!cluster) return;
-    const name = cluster.metadata.name;
+    const kubeconfig = this.kubeconfig();
+    if (!cluster || !kubeconfig || this.editSelectedAPIs().size === 0) return;
     const apis = [...this.editSelectedAPIs()].sort();
-    const apisYaml = apis.map(a => `    - name: ${a}`).join('\n');
-    const yaml = `apiVersion: core.kbind.io/v1alpha1
-kind: ClusterBinding
-metadata:
-  name: ${name}
-spec:
-  connectionRef:
-    name: ${name}
-  apis:
-${apisYaml}`;
-    this.editGeneratedYAML.set(yaml);
-    this.copyToClipboard(yaml, 'ClusterBinding YAML copied to clipboard');
+    this.editGeneratedYAML.set(this.assembleBundle(cluster.metadata.name, apis, kubeconfig, false));
   }
 
   copyBundle(): void {
@@ -316,7 +312,7 @@ ${apisYaml}`;
 
   copyEditYAML(): void {
     const yaml = this.editGeneratedYAML();
-    if (yaml) this.copyToClipboard(yaml, 'ClusterBinding YAML copied to clipboard');
+    if (yaml) this.copyToClipboard(yaml, 'Bundle copied to clipboard');
   }
 
   saveEdit(): void {

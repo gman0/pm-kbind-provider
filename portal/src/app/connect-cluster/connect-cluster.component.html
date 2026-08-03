@@ -190,17 +190,28 @@
 </ui5-dialog>
 
 <!-- ── Edit dialog ────────────────────────────────────────────────────────────── -->
-<ui5-dialog #editDialog [attr.header-text]="'Edit — ' + (editingCluster()?.metadata?.name ?? '')" style="width: 860px">
+<ui5-dialog #editDialog [attr.header-text]="'Edit connection — ' + (editingCluster()?.metadata?.name ?? '')" style="width: 860px">
   <div class="dialog-content">
     @if (editingCluster(); as cluster) {
       @if (editIsAutoBind()) {
         <div class="info-panel info-panel--neutral">
           <ui5-text>
             This connection binds <strong>all APIs</strong> automatically (<code>autoBind: true</code>).
-            No ClusterBinding was generated. To restrict to specific APIs, delete this connection
-            and create a new one with "Select specific APIs".
+            To restrict to specific APIs, delete this connection and create a new one with "Select specific APIs".
           </ui5-text>
         </div>
+        @if (editGeneratedYAML()) {
+          <div class="bundle-preview" style="margin-top: 1rem">
+            <div class="preview-header">
+              <ui5-title level="H6">Current bundle</ui5-title>
+              <ui5-button design="Transparent" icon="copy" (click)="copyEditYAML()">Copy</ui5-button>
+            </div>
+            <pre class="bundle-yaml">{{ editGeneratedYAML() }}</pre>
+            <div class="apply-hint">
+              Apply with: <code>kubectl apply -f bundle.yaml</code>
+            </div>
+          </div>
+        }
       } @else {
         <div class="edit-section">
           <ui5-title level="H6" style="margin-bottom: 0.75rem">Selected APIs</ui5-title>
@@ -230,24 +241,30 @@
             </div>
           }
 
-          <div class="action-row" style="margin-top: 1rem">
+          <div class="generate-cta" style="margin-top: 1rem">
             <ui5-button
-              design="Default"
-              icon="copy"
+              design="Emphasized"
               [disabled]="editSelectedAPIs().size === 0"
-              (click)="generateClusterBinding()"
-            >Generate &amp; copy ClusterBinding</ui5-button>
+              (click)="generateEditBundle()"
+            >Generate bundle</ui5-button>
+            <span class="generate-hint">
+              @if (!editGeneratedYAML()) {
+                Select the APIs to sync, then generate the bundle. Copy it to your downstream cluster and click <strong>Save</strong>.
+              } @else {
+                Copy the bundle to your downstream cluster to apply changes, then click <strong>Save</strong>.
+              }
+            </span>
           </div>
 
           @if (editGeneratedYAML()) {
             <div class="bundle-preview" style="margin-top: 1rem">
               <div class="preview-header">
-                <ui5-title level="H6">ClusterBinding YAML</ui5-title>
-                <ui5-button design="Transparent" icon="copy" (click)="copyEditYAML()">Copy again</ui5-button>
+                <ui5-title level="H6">Bundle</ui5-title>
+                <ui5-button design="Transparent" icon="copy" (click)="copyEditYAML()">Copy</ui5-button>
               </div>
               <pre class="bundle-yaml">{{ editGeneratedYAML() }}</pre>
               <div class="apply-hint">
-                Apply with: <code>kubectl apply -f clusterbinding.yaml</code>
+                Apply with: <code>kubectl apply -f bundle.yaml</code>
               </div>
             </div>
           }
