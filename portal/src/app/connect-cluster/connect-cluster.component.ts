@@ -369,8 +369,8 @@ export class ConnectClusterComponent implements OnInit {
 
   getStatusLabel(cluster: KbindCluster): string {
     const cond = this.getConnectedCondition(cluster);
-    if (!cond) return 'Unknown';
-    if (cond.status === 'True') return 'Connected';
+    if (!cond) return 'Pending';
+    if (cond.status === 'True') return 'Established';
     return cond.reason === 'LeaseNotFound' ? 'Not connected' : 'Stale';
   }
 
@@ -378,14 +378,7 @@ export class ConnectClusterComponent implements OnInit {
     const cond = this.getConnectedCondition(cluster);
     if (!cond) return 'status-unknown';
     if (cond.status === 'True') return 'status-connected';
-    return cond.reason === 'LeaseNotFound' ? 'status-pending' : 'status-stale';
-  }
-
-  getLastHeartbeat(cluster: KbindCluster): string {
-    const cond = this.getConnectedCondition(cluster);
-    if (!cond) return '—';
-    if (cond.status === 'True') return 'Established';
-    return cond.lastTransitionTime ? this.formatRelativeTime(cond.lastTransitionTime) : '—';
+    return 'status-unknown';
   }
 
   getAPISummary(cluster: KbindCluster): string {
@@ -393,21 +386,6 @@ export class ConnectClusterComponent implements OnInit {
     if (!apis || apis.length === 0) return 'All APIs';
     if (apis.length <= 2) return apis.map(a => a.name).join(', ');
     return `${apis[0].name}, ${apis[1].name} +${apis.length - 2} more`;
-  }
-
-  isAutoBind(cluster: KbindCluster): boolean {
-    return !cluster.spec?.apis || cluster.spec.apis.length === 0;
-  }
-
-  private formatRelativeTime(iso: string): string {
-    const delta = Date.now() - new Date(iso).getTime();
-    const s = Math.floor(delta / 1000);
-    if (s < 60) return `${s}s ago`;
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
   }
 
   // ── shared API tile helpers ──────────────────────────────────────────────────

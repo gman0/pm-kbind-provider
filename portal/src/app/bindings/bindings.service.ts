@@ -42,7 +42,6 @@ export interface KbindCluster {
   spec?: { apis?: Array<{ name: string }> };
   status?: {
     localClusterUID?: string;
-    leaseRef?: { namespace: string; name: string };
     conditions?: KbindClusterCondition[];
   };
 }
@@ -94,7 +93,6 @@ const LIST_KBIND_CLUSTERS_QUERY = `
             spec { apis { name } }
             status {
               localClusterUID
-              leaseRef { namespace name }
               conditions { type status reason message lastTransitionTime }
             }
           }
