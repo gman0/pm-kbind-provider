@@ -148,12 +148,19 @@
         </div>
       </div>
 
-      <div class="action-row">
+      <div class="generate-cta">
         <ui5-button
-          design="Default"
+          design="Emphasized"
           [disabled]="!canGenerate()"
           (click)="generateBundle()"
         >Generate bundle</ui5-button>
+        <span class="generate-hint">
+          @if (!generatedBundle()) {
+            Assembles the YAML bundle. Once generated, copy it to your downstream cluster, then click <strong>Save connection</strong>.
+          } @else {
+            Bundle regenerated. Copy the updated YAML to your downstream cluster if needed, then click <strong>Save connection</strong>.
+          }
+        </span>
       </div>
 
       @if (generatedBundle()) {

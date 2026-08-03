@@ -339,6 +339,26 @@
   gap: 1rem;
 }
 
+.generate-cta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: var(--sapInformationBackground);
+  border: 1px solid var(--sapInformationBorderColor, #0070f2);
+  border-radius: 0.5rem;
+
+  ui5-button {
+    flex-shrink: 0;
+  }
+}
+
+.generate-hint {
+  font-size: var(--sapFontSmallSize, 0.75rem);
+  color: var(--sapContent_LabelColor);
+  line-height: 1.4;
+}
+
 // ── bundle / YAML preview ──────────────────────────────────────────────────────
 
 .bundle-preview {
