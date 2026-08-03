@@ -299,6 +299,21 @@
     background: var(--sapInformationBackground);
   }
 
+  &.api-tile--added {
+    border-left-color: var(--sapSuccessColor, #107e3e);
+    background: var(--sapSuccessBackground);
+
+    .tile-check-icon { color: var(--sapSuccessColor, #107e3e); }
+  }
+
+  &.api-tile--removed {
+    border-left-color: var(--sapErrorColor, #bb0000);
+    background: var(--sapErrorBackground);
+    opacity: 0.75;
+
+    .tile-remove-icon { color: var(--sapErrorColor, #bb0000); }
+  }
+
   .tile-header {
     display: flex;
     align-items: center;
@@ -321,11 +336,13 @@
     font-size: 0.75rem;
   }
 
-  .tile-check-icon {
-    color: var(--sapBrandColor);
+  .tile-check-icon,
+  .tile-remove-icon {
     font-size: 1.125rem;
     flex-shrink: 0;
   }
+
+  .tile-check-icon { color: var(--sapBrandColor); }
 }
 
 .empty-apis {

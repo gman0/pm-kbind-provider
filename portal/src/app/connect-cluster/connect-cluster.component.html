@@ -221,7 +221,11 @@
           } @else {
             <div class="api-list" style="margin-top: 0.75rem">
               @for (api of editAvailableAPIs(); track api) {
-                <div class="api-tile" [class.selected]="editSelectedAPIs().has(api)" (click)="onEditAPITileClick(api)">
+                <div class="api-tile"
+                     [class.selected]="editSelectedAPIs().has(api) && editOriginalAPIs().has(api)"
+                     [class.api-tile--added]="!editOriginalAPIs().has(api) && editSelectedAPIs().has(api)"
+                     [class.api-tile--removed]="editOriginalAPIs().has(api) && !editSelectedAPIs().has(api)"
+                     (click)="onEditAPITileClick(api)">
                   <div class="tile-header">
                     <ui5-avatar size="S" shape="Circle" [initials]="getAPIInitials(api)" [colorScheme]="getColorScheme(api)"></ui5-avatar>
                     <div class="tile-title">
@@ -230,6 +234,9 @@
                     </div>
                     @if (editSelectedAPIs().has(api)) {
                       <ui5-icon name="accept" class="tile-check-icon"></ui5-icon>
+                    }
+                    @if (editOriginalAPIs().has(api) && !editSelectedAPIs().has(api)) {
+                      <ui5-icon name="decline" class="tile-remove-icon"></ui5-icon>
                     }
                   </div>
                 </div>
@@ -240,14 +247,16 @@
           <div class="generate-cta" style="margin-top: 1rem">
             <ui5-button
               design="Emphasized"
-              [disabled]="editSelectedAPIs().size === 0"
+              [disabled]="editSelectedAPIs().size === 0 || !editHasChanges()"
               (click)="generateEditBundle()"
             >Generate bundle</ui5-button>
             <span class="generate-hint">
-              @if (!editGeneratedYAML()) {
-                Select the APIs to sync, then generate the bundle. Copy it to your downstream cluster and click <strong>Save</strong>.
+              @if (!editHasChanges()) {
+                No changes to the API selection.
+              } @else if (!editGeneratedYAML()) {
+                Selection changed — generate a new bundle and copy it to your downstream cluster, then click <strong>Save</strong>.
               } @else {
-                Copy the bundle to your downstream cluster to apply changes, then click <strong>Save</strong>.
+                Copy the updated bundle to your downstream cluster to apply the changes, then click <strong>Save</strong>.
               }
             </span>
           </div>

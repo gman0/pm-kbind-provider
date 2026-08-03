@@ -104,6 +104,7 @@ export class ConnectClusterComponent implements OnInit {
 
   editingCluster = signal<KbindCluster | null>(null);
   editSelectedAPIs = signal<Set<string>>(new Set());
+  editOriginalAPIs = signal<Set<string>>(new Set());
   editHideSystemAPIs = signal(true);
   editGeneratedYAML = signal('');
   saving = signal(false);
@@ -119,8 +120,18 @@ export class ConnectClusterComponent implements OnInit {
     return [...new Set(filtered.map(r => `${r.resource}.${r.group}`))].sort();
   });
 
+  editHasChanges = computed(() => {
+    const orig = this.editOriginalAPIs();
+    const curr = this.editSelectedAPIs();
+    if (orig.size !== curr.size) return true;
+    for (const api of curr) {
+      if (!orig.has(api)) return true;
+    }
+    return false;
+  });
+
   canSaveEdit = computed(
-    () => !this.editIsAutoBind() && this.editSelectedAPIs().size > 0 && !!this.editGeneratedYAML()
+    () => !this.editIsAutoBind() && this.editSelectedAPIs().size > 0 && !!this.editGeneratedYAML() && this.editHasChanges()
   );
 
   // ── delete dialog state ──────────────────────────────────────────────────────
@@ -268,6 +279,7 @@ export class ConnectClusterComponent implements OnInit {
     this.editingCluster.set(cluster);
     const preSelected = new Set((cluster.spec?.apis ?? []).map(a => a.name));
     this.editSelectedAPIs.set(preSelected);
+    this.editOriginalAPIs.set(new Set(preSelected));
     this.editHideSystemAPIs.set(true);
     this.saving.set(false);
 
