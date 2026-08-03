@@ -153,10 +153,10 @@
   }
 
   &.status-stale {
-    color: var(--sapWarningColor, #e9730c);
-    background: var(--sapWarningBackground);
+    color: var(--sapErrorColor, #bb0000);
+    background: var(--sapErrorBackground);
 
-    .status-dot { background: var(--sapWarningColor, #e9730c); }
+    .status-dot { background: var(--sapErrorColor, #bb0000); }
   }
 
   &.status-unknown {

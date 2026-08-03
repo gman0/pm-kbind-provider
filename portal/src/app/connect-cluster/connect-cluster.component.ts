@@ -390,7 +390,7 @@ export class ConnectClusterComponent implements OnInit {
     const cond = this.getConnectedCondition(cluster);
     if (!cond) return 'status-unknown';
     if (cond.status === 'True') return 'status-connected';
-    return 'status-unknown';
+    return cond.reason === 'LeaseNotFound' ? 'status-unknown' : 'status-stale';
   }
 
   getLastHeartbeat(cluster: KbindCluster): string | null {

@@ -67,8 +67,6 @@ func (r *IssuerReconciler) SetupWithManager(mgr mcmanager.Manager) error {
 }
 
 func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Request) (ctrl.Result, error) {
-	fmt.Printf("### IssuerReconciler\n")
-
 	log := log.FromContext(ctx).WithValues("cluster", req.ClusterName)
 
 	cl, err := r.manager.GetCluster(ctx, req.ClusterName)
@@ -108,10 +106,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Reques
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	consumerURL, err := consumerWorkspaceURL(cl.GetConfig().Host, string(req.ClusterName))
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("building consumer workspace URL: %w", err)
-	}
+	consumerURL := consumerWorkspaceURL(cl.GetConfig().Host, string(req.ClusterName))
 
 	kubeconfigBytes, err := buildKubeconfig(consumerURL, cl.GetConfig().CAData, string(token))
 	if err != nil {
@@ -199,16 +194,8 @@ func (r *IssuerReconciler) readToken(ctx context.Context, c client.Client) ([]by
 	return secret.Data["token"], nil
 }
 
-// consumerWorkspaceURL derives the direct kcp workspace URL from the virtual
-// workspace host and the logical cluster name (e.g. "root:consumers:abc").
-// The virtual workspace host may carry a long path prefix; only the scheme and
-// host component are used so the result is always well-formed.
-func consumerWorkspaceURL(virtualHost, clusterName string) (string, error) {
-	u, err := url.Parse(virtualHost)
-	if err != nil {
-		return "", fmt.Errorf("parsing host %q: %w", virtualHost, err)
-	}
-	return u.Scheme + "://" + u.Host + "/clusters/" + clusterName, nil
+func consumerWorkspaceURL(host, clusterName string) string {
+	return fmt.Sprintf("%s/clusters/%s", host, clusterName)
 }
 
 func buildKubeconfig(server string, caData []byte, token string) ([]byte, error) {

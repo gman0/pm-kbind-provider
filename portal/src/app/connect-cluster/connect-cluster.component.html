@@ -158,9 +158,9 @@
         >Generate bundle</ui5-button>
         <span class="generate-hint">
           @if (!generatedBundle()) {
-            Assembles the YAML bundle. Once generated, copy it to your downstream cluster, then click <strong>Save connection</strong>.
+            Assembles the YAML bundle. Once generated, apply it to your downstream cluster, then click <strong>Save connection</strong>.
           } @else {
-            Bundle regenerated. Copy the updated YAML to your downstream cluster if needed, then click <strong>Save connection</strong>.
+            Bundle regenerated. Apply the updated YAML to your downstream cluster, then click <strong>Save connection</strong>.
           }
         </span>
       </div>
@@ -260,9 +260,9 @@
               @if (!editHasChanges()) {
                 No changes to the API selection.
               } @else if (!editGeneratedYAML()) {
-                Selection changed — generate a new bundle and copy it to your downstream cluster, then click <strong>Save</strong>.
+                Selection changed — generate a new bundle and apply it to your downstream cluster, then click <strong>Save</strong>.
               } @else {
-                Copy the updated bundle to your downstream cluster to apply the changes, then click <strong>Save</strong>.
+                Apply the updated bundle to your downstream cluster, then click <strong>Save</strong>.
               }
             </span>
           </div>
