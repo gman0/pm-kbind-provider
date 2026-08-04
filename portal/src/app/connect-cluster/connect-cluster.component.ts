@@ -85,10 +85,14 @@ export class ConnectClusterComponent implements OnInit {
   creating = signal(false);
 
   bundleNameValid = computed(() => K8S_NAME_RE.test(this.bundleName().trim()));
+  bundleNameTaken = computed(() =>
+    this.kbindClusters().some(c => c.metadata.name === this.bundleName().trim())
+  );
 
   canGenerate = computed(
     () =>
       this.bundleNameValid() &&
+      !this.bundleNameTaken() &&
       (this.autoBind() || this.selectedAPIs().size > 0) &&
       this.credentialsReady()
   );
@@ -96,6 +100,7 @@ export class ConnectClusterComponent implements OnInit {
   canSave = computed(
     () =>
       this.bundleNameValid() &&
+      !this.bundleNameTaken() &&
       !!this.generatedBundle() &&
       !this.creating()
   );

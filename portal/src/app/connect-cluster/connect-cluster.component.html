@@ -93,6 +93,8 @@
         ></ui5-input>
         @if (bundleName().trim().length > 0 && !bundleNameValid()) {
           <span class="field-error">Lowercase alphanumeric and hyphens only, no leading/trailing hyphen.</span>
+        } @else if (bundleNameTaken()) {
+          <span class="field-error">A connection with this name already exists.</span>
         } @else {
           <span class="field-hint">Used as <code>metadata.name</code> for the Secret, Connection, and ClusterBinding.</span>
         }

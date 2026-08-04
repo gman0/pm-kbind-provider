@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +30,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -74,13 +76,6 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Reques
 	}
 	c := cl.GetClient()
 
-	// Short-circuit: credentials already written.
-	if err := c.Get(ctx, client.ObjectKey{Namespace: kbindNamespace, Name: credentialsSecret}, &corev1.Secret{}); err == nil {
-		return reconcile.Result{}, nil
-	} else if !apierrors.IsNotFound(err) {
-		return reconcile.Result{}, fmt.Errorf("checking credentials secret: %w", err)
-	}
-
 	log.Info("provisioning konnector credentials")
 
 	if err := r.ensureNamespace(ctx, c); err != nil {
@@ -105,9 +100,12 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Reques
 		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	consumerURL := consumerWorkspaceURL(cl.GetConfig().Host, string(req.ClusterName))
+	consumerWsUrl, err := consumerWorkspaceURL(cl.GetConfig().Host, string(req.ClusterName))
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("building consumer workspace URL: %w", err)
+	}
 
-	kubeconfigBytes, err := buildKubeconfig(consumerURL, cl.GetConfig().CAData, string(token))
+	kubeconfigBytes, err := buildKubeconfig(consumerWsUrl, cl.GetConfig().CAData, string(token))
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("building kubeconfig: %w", err)
 	}
@@ -117,16 +115,24 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Reques
 			Name:      credentialsSecret,
 			Namespace: kbindNamespace,
 		},
-		Data: map[string][]byte{
-			"kubeconfig": kubeconfigBytes,
-		},
 	}
-	if err := c.Create(ctx, creds); err != nil && !apierrors.IsAlreadyExists(err) {
-		return reconcile.Result{}, fmt.Errorf("creating credentials secret: %w", err)
+	if _, err := controllerutil.CreateOrUpdate(ctx, c, creds, func() error {
+		creds.Data = map[string][]byte{"kubeconfig": kubeconfigBytes}
+		return nil
+	}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("upserting credentials secret: %w", err)
 	}
 
 	log.Info("konnector credentials ready")
 	return reconcile.Result{}, nil
+}
+
+func consumerWorkspaceURL(virtualHost, clusterName string) (string, error) {
+	u, err := url.Parse(virtualHost)
+	if err != nil {
+		return "", fmt.Errorf("parsing host %q: %w", virtualHost, err)
+	}
+	return u.Scheme + "://" + u.Host + "/clusters/" + clusterName, nil
 }
 
 func (r *IssuerReconciler) ensureNamespace(ctx context.Context, c client.Client) error {
@@ -191,10 +197,6 @@ func (r *IssuerReconciler) readToken(ctx context.Context, c client.Client) ([]by
 		return nil, fmt.Errorf("reading token secret: %w", err)
 	}
 	return secret.Data["token"], nil
-}
-
-func consumerWorkspaceURL(host, clusterName string) string {
-	return fmt.Sprintf("%s/clusters/%s", host, clusterName)
 }
 
 func buildKubeconfig(server string, caData []byte, token string) ([]byte, error) {
