@@ -4,7 +4,7 @@ metadata:
   labels:
     ui.platform-mesh.io/entity: core_platform-mesh_io_account
     ui.platform-mesh.io/content-for: kube-bind-provider.platform-mesh.io
-  name: kbind-ui
+  name: kube-bind-provider.platform-mesh.io
 spec:
   inlineConfiguration:
     content: |-

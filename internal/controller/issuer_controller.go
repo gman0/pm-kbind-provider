@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
