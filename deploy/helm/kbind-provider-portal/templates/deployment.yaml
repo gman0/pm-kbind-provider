@@ -1,14 +1,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kube-bind-portal.fullname" . }}
+  name: {{ include "kbind-provider-portal.fullname" . }}
   labels:
-    {{- include "kube-bind-portal.labels" . | nindent 4 }}
+    {{- include "kbind-provider-portal.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "kube-bind-portal.selectorLabels" . | nindent 6 }}
+      {{- include "kbind-provider-portal.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -16,7 +16,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "kube-bind-portal.labels" . | nindent 8 }}
+        {{- include "kbind-provider-portal.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -25,7 +25,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "kube-bind-portal.serviceAccountName" . }}
+      serviceAccountName: {{ include "kbind-provider-portal.serviceAccountName" . }}
 {{ include "common.hostAliases" $ | nindent 6 }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
@@ -33,7 +33,7 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: {{ include "kube-bind-portal.image" . | quote }}
+          image: {{ include "kbind-provider-portal.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http

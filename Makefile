@@ -153,14 +153,14 @@ portal-run:
 ## portal-run-detached: Run portal container in background
 .PHONY: portal-run-detached
 portal-run-detached:
-	docker run -d --rm --name kbind-portal -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
+	docker run -d --rm --name kbind-provider-portal -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
 	@echo "Portal running at http://localhost:$(PORTAL_PORT)"
-	@echo "Stop with: docker stop kbind-portal"
+	@echo "Stop with: docker stop kbind-provider-portal"
 
 ## portal-stop: Stop the portal container
 .PHONY: portal-stop
 portal-stop:
-	docker stop kbind-portal
+	docker stop kbind-provider-portal
 
 # Refresh the operator chart's bundled CRDs from the generated sdk CRDs.
 .PHONY: helm-sync-crds
@@ -183,7 +183,7 @@ codegen: $(CONTROLLER_GEN) $(KCP_APIGEN_GEN) $(YAML_PATCH)
 ## helm-deps: Update Helm chart dependencies
 .PHONY: helm-deps
 helm-deps:
-	helm dependency update deploy/helm/kbind-portal
+	helm dependency update deploy/helm/kbind-provider-portal
 
 # OCM / Helm publishing parameters
 OCM ?= ocm
@@ -201,17 +201,12 @@ IMAGE_VERSION ?= $(VERSION)
 # OCI registry tag for the referenced local images (free-form, e.g. "latest" or "0.1.0").
 # Defaults to "latest" so local builds resolve against an existing tag; CI sets the release tag.
 OCI_TAG ?= latest
-# Upstream kube-bind artifacts bundled (by reference) into our OCM component and relocated
-# into $(OCM_REPO) on `ocm-push`. Keep in sync with each other and with the backend image
-# tag in config/platfrom-mesh-ocm/managedprovider.yaml.
-BACKEND_CHART_VERSION ?= 0.0.0-9aa7dc83de93180718abbb7e548161a003b8999a
-BACKEND_IMAGE_TAG ?= 0.0.0-6ac88b0f68dc5247c773dd6c3b3a0f44a64e9b1b
-# Charts this repo owns. The OCM component embeds them (input: helm) and publishes them as
-# OCI artifacts on `ocm-push`; `helm-push` is the standalone (non-OCM) publish path.
-HELM_CHARTS ?= kbind-portal
+# Charts this repo owns. The OCM component embeds them and publishes them as OCI artifacts
+# on `ocm-push`; `helm-push` is the standalone (non-OCM) publish path.
+HELM_CHARTS ?= kbind-provider-operator kbind-provider-portal
 
 # Helm chart that ships the operator and its CRDs.
-OPERATOR_CHART ?= deploy/helm/kbind-provider
+OPERATOR_CHART ?= deploy/helm/kbind-provider-operator
 
 ## ocm-build: Build OCM component archive (CTF) from constructor/component-constructor.yaml
 # NOTE: the component references our portal chart as a published OCI artifact, so run
@@ -225,9 +220,7 @@ ocm-build:
 	  VERSION=$(VERSION) \
 	  CHART_VERSION=$(CHART_VERSION) \
 	  IMAGE_VERSION=$(IMAGE_VERSION) \
-	  OCI_TAG=$(OCI_TAG) \
-	  BACKEND_CHART_VERSION=$(BACKEND_CHART_VERSION) \
-	  BACKEND_IMAGE_TAG=$(BACKEND_IMAGE_TAG)
+	  OCI_TAG=$(OCI_TAG)
 
 ## ocm-push: Transfer the OCM component to $(OCM_REPO), relocating ALL resources by-value
 # --copy-resources / --copy-local-resources pull the referenced external artifacts (upstream
@@ -268,6 +261,11 @@ helm-push:
 	  echo "==> pushing $$chart-$(CHART_VERSION).tgz to oci://$(HELM_REPO)"; \
 	  $(HELM) push $(BUILD_DIR)/charts/$$chart-$(CHART_VERSION).tgz oci://$(HELM_REPO) || exit 1; \
 	done
+
+## local-push: Build and push OCM artifacts to the local kind cluster registry (requires ocm-transfer-pod)
+.PHONY: local-push
+local-push:
+	hack/push-local.sh
 
 ## help: Display this help
 .PHONY: help

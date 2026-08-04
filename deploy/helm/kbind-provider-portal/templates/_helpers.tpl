@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "kube-bind-portal.name" -}}
+{{- define "kbind-provider-portal.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "kube-bind-portal.fullname" -}}
+{{- define "kbind-provider-portal.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "kube-bind-portal.chart" -}}
+{{- define "kbind-provider-portal.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "kube-bind-portal.labels" -}}
-helm.sh/chart: {{ include "kube-bind-portal.chart" . }}
-{{ include "kube-bind-portal.selectorLabels" . }}
+{{- define "kbind-provider-portal.labels" -}}
+helm.sh/chart: {{ include "kbind-provider-portal.chart" . }}
+{{ include "kbind-provider-portal.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,17 +43,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "kube-bind-portal.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "kube-bind-portal.name" . }}
+{{- define "kbind-provider-portal.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "kbind-provider-portal.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "kube-bind-portal.serviceAccountName" -}}
+{{- define "kbind-provider-portal.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "kube-bind-portal.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "kbind-provider-portal.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -62,7 +62,7 @@ Create the name of the service account to use
 {{/*
 Container image reference, handling both tag and digest (@sha256:...) formats.
 */}}
-{{- define "kube-bind-portal.image" -}}
+{{- define "kbind-provider-portal.image" -}}
 {{- $tag := .Values.image.tag | default .Chart.AppVersion -}}
 {{- if hasPrefix "@" $tag -}}
 {{- printf "%s%s" .Values.image.repository $tag -}}

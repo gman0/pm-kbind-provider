@@ -60,7 +60,7 @@ httpRoute:
     - extensionRef:
         group: traefik.io
         kind: Middleware
-        name: kube-bind-portal-cors
+        name: kbind-provider-portal-cors
       type: ExtensionRef
   referenceGrant:
     enabled: true

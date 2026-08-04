@@ -29,7 +29,7 @@ KUBECONFIG=$PM_KUBECONFIG kubectl ws create kube-bind --type=root:provider --ent
 Seed kube-bind + platform-mesh.io assets into the provider workspace. The `--host-override` flag stamps the externally-reachable kcp hostname into the generated kubeconfig. We use `https://root.kcp.localhost:8443` because:
 
 - It is the SNI hostname the platform-mesh Istio gateway routes to the kcp root shard (`kcp-root-shard-tlsroute` in the `infra` chart). In this single-shard kind setup all workspaces live on the root shard, so path-based routing (`/clusters/<id>/...`) resolves correctly through it.
-- It is resolvable **inside** the provider cluster via the backend pod's `hostAliases` (mapped to the frontproxy ClusterIP — see [deploy/helm/backend-values.yaml](../deploy/helm/backend-values.yaml)).
+- It is resolvable **inside** the provider cluster via the operator pod's `hostAliases` (mapped to the frontproxy ClusterIP — see `hostAliases` in `deploy/helm/kbind-provider-operator/values.yaml`).
 - It is resolvable **from a consumer kind cluster** by adding a `hostAlias` to the konnector pod pointing `root.kcp.localhost` at the host-gateway IP — the same trick contrib-examples uses for the api-syncagent (`contrib-examples/msp-postgres-localsetup/hack/syncagent-install.sh`).
 
 `https://localhost:8443` (the front-proxy TLSRoute hostname) does not work for consumer pods, because `localhost` already resolves to the pod itself and cannot be overridden via `hostAliases`.
@@ -39,10 +39,10 @@ go run cmd/init/main.go --kcp-kubeconfig $PM_KUBECONFIG \
   --host-override=https://frontproxy-front-proxy.platform-mesh-system:8443
 ```
 
-Extract the generated backend kubeconfig:
+Extract the generated provider kubeconfig:
 
 ```bash
-KUBECONFIG=$PM_KUBECONFIG kubectl get secret kube-bind-backend-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > backend.kubeconfig
+KUBECONFIG=$PM_KUBECONFIG kubectl get secret kube-bind-provider-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > backend.kubeconfig
 ```
 
 ## 3. Build and Load Images into Kind
@@ -66,17 +66,13 @@ kubectl create secret generic kube-bind-provider-kubeconfig \
   -n kube-bind-system
 ```
 
-Install the backend. Bootstrap was done out-of-cluster in step 2, so no init container is needed here. `backend.image.tag` is the upstream backend tag — separate from `$IMAGE_TAG` which controls the provider-init/portal images built by `make images`.
+Install the operator:
 
 ```bash
-helm upgrade --install kube-bind-backend \
-  oci://ghcr.io/kube-bind/charts/backend \
-  --version 0.8.1 \
-  -f deploy/helm/backend-values.yaml \
-  -n kube-bind-system \
-  --set 'backend.image.repository=ghcr.io/kube-bind/backend' \
-  --set 'backend.image.tag=0.0.0-dfa3d5c84db3988a14fa8b27a8fedc9b6dd1c49e' \
-  --set 'backend.image.pullPolicy=Always'
+helm upgrade --install kbind-provider-operator \
+  deploy/helm/kbind-provider-operator \
+  -n kube-bind-system --create-namespace \
+  --set image.tag=$IMAGE_TAG
 ```
 
 Install the portal:
@@ -84,8 +80,8 @@ Install the portal:
 ```bash
 make helm-deps
 
-helm upgrade --install kube-bind-portal \
-  deploy/helm/kube-bind-portal \
+helm upgrade --install kbind-provider-portal \
+  deploy/helm/kbind-provider-portal \
   -n kube-bind-system \
   --set image.tag=$IMAGE_TAG \
   --set httpRoute.enabled=true \
@@ -100,8 +96,8 @@ Once the pods are healthy, exercise the portal with the sample resources from [D
 ```
 kubectl get pods -n kube-bind-system 
 NAME                                 READY   STATUS    RESTARTS   AGE
-kube-bind-backend-6786c7dc48-p6q7x   1/1     Running   0          114s
-kube-bind-portal-d66c5557c-sz8kp     0/1     Running   0          5s
+kbind-provider-operator-6786c7dc48-p6q7x   1/1     Running   0          114s
+kbind-provider-portal-d66c5557c-sz8kp     0/1     Running   0          5s
 ```
 
 ## 5. Create a Consumer Kind Cluster

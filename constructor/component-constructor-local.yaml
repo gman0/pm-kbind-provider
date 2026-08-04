@@ -1,0 +1,31 @@
+# Local-only OCM component descriptor — used by hack/push-local.sh.
+#
+# Contains only chart resources (no image resources). Images are loaded into the
+# kind cluster separately via `make kind-load-all`; the OCM controller delivers
+# them via the chart values rather than OCM image relocation.
+#
+# Template variables (go templater):
+#   VERSION          — component version (e.g. 0.0.0-dev)
+#   CHART_VERSION    — chart version tag in the local registry
+#   LOCAL_HELM_REPO  — OCI base path for charts in the local registry
+#                      (e.g. oci-registry-docker-registry.registry.svc.cluster.local/platform-mesh/kube-bind-provider/charts)
+components:
+  - name: github.com/platform-mesh/kube-bind-provider
+    version: {{ .VERSION }}
+    provider:
+      name: platform-mesh
+    resources:
+      - name: operator-chart
+        type: helmChart
+        version: {{ .CHART_VERSION }}
+        relation: local
+        access:
+          type: ociArtifact
+          imageReference: {{ .LOCAL_HELM_REPO }}/kbind-provider-operator:{{ .CHART_VERSION }}
+      - name: portal-chart
+        type: helmChart
+        version: {{ .CHART_VERSION }}
+        relation: local
+        access:
+          type: ociArtifact
+          imageReference: {{ .LOCAL_HELM_REPO }}/kbind-provider-portal:{{ .CHART_VERSION }}

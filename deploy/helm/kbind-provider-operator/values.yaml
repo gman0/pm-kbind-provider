@@ -1,4 +1,4 @@
-# Default values for platform-mesh-kbind-provider.
+# Default values for kbind-provider-operator.
 
 # -- Number of replicas for the operator deployment
 replicaCount: 1
@@ -25,7 +25,7 @@ kcpKubeconfigSecret: pm-kbind-provider-kubeconfig
 # -- Key within the Secret that contains the kubeconfig data
 kcpKubeconfigKey: kubeconfig
 
-# -- Name of the APIExportEndpointSlice the platform-mesh-kbind-provider-operator watches.
+# -- Name of the APIExportEndpointSlice the kbind-provider-operator-operator watches.
 # Must match the APIExport name created in the kcp provider workspace by operator init.
 endpointSliceName: kube-bind-provider.platform-mesh.io
 

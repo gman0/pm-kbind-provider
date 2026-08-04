@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "platform-mesh-kbind-provider.fullname" . }}
+  name: {{ include "kbind-provider-operator.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "platform-mesh-kbind-provider.labels" . | nindent 4 }}
+    {{- include "kbind-provider-operator.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "platform-mesh-kbind-provider.selectorLabels" . | nindent 6 }}
+      {{- include "kbind-provider-operator.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "platform-mesh-kbind-provider.labels" . | nindent 8 }}
+        {{- include "kbind-provider-operator.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -26,7 +26,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "platform-mesh-kbind-provider.serviceAccountName" . }}
+      serviceAccountName: {{ include "kbind-provider-operator.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -41,7 +41,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/operator", "init"]
           args:
-            - --kcp-kubeconfig={{ include "platform-mesh-kbind-provider.kubeconfigPath" . }}
+            - --kcp-kubeconfig={{ include "kbind-provider-operator.kubeconfigPath" . }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
@@ -59,7 +59,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            - --kcp-kubeconfig={{ include "platform-mesh-kbind-provider.kubeconfigPath" . }}
+            - --kcp-kubeconfig={{ include "kbind-provider-operator.kubeconfigPath" . }}
             - --endpoint-slice={{ .Values.endpointSliceName }}
           {{- with .Values.securityContext }}
           securityContext:

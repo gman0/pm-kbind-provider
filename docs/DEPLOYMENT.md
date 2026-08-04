@@ -52,9 +52,7 @@ make portal-stop               # stop background container
 
 ## Helm Deployment
 
-### Deploy Backend (upstream kube-bind chart + init container)
-
-The upstream kube-bind Helm chart is extended with `initContainers` support. Use the provided values file:
+### Deploy Operator
 
 ```bash
 # Create the kubeconfig secret
@@ -64,26 +62,10 @@ kubectl create secret generic kube-bind-provider-kubeconfig \
   --from-file=kubeconfig=backend.kubeconfig \
   -n kube-bind-system
 
-# Install using upstream chart with provider values
-helm upgrade --install kube-bind-backend \
-  oci://ghcr.io/kube-bind/charts/backend \
-  --version 0.8.1 \
-  -f deploy/helm/backend-values.yaml \
-  --set backend.image.tag=0.0.0-dfa3d5c84db3988a14fa8b27a8fedc9b6dd1c49e \
-  -n kube-bind-system
-
-# Install using local chart with provider values (for development).
-# Bootstrap is done out-of-cluster in DEVELOPMENT.md step 2, so no init container is needed here.
-# `backend.image.tag` is the upstream backend tag — separate from $IMAGE_TAG which
-# only controls the provider-init/portal images built by `make images`.
-# TODO: Once changes are released in kube-bind, we can move to official kube-bind image.
-helm upgrade --install kube-bind-backend \
-  ../../kube-bind/kube-bind/deploy/charts/backend \
-  -f deploy/helm/backend-values.yaml \
-  -n kube-bind-system \
-  --set 'backend.image.repository=ghcr.io/kube-bind/backend' \
-  --set 'backend.image.tag=0.0.0-dfa3d5c84db3988a14fa8b27a8fedc9b6dd1c49e' \
-  --set 'backend.image.pullPolicy=Always'
+helm upgrade --install kbind-provider-operator \
+  deploy/helm/kbind-provider-operator \
+  -n kube-bind-system --create-namespace \
+  --set image.tag=$IMAGE_TAG
 ```
 
 ### Deploy Portal
@@ -96,8 +78,8 @@ make helm-deps
 # httpRoute + middleware are off by default; enable them so the portal is reachable
 # via the platform-mesh gateway. referenceGrant is gated on httpRoute.enabled and
 # defaults to true.
-helm upgrade --install kube-bind-portal \
-  deploy/helm/kube-bind-portal \
+helm upgrade --install kbind-provider-portal \
+  deploy/helm/kbind-provider-portal \
   -n kube-bind-system \
   --set image.tag=$IMAGE_TAG \
   --set httpRoute.enabled=true \

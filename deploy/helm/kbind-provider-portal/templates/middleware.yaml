@@ -2,10 +2,10 @@
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: {{ include "kube-bind-portal.fullname" . }}-cors
+  name: {{ include "kbind-provider-portal.fullname" . }}-cors
   namespace: {{ .Values.middleware.namespace | default .Values.httpRoute.namespace | default "platform-mesh-system" }}
   labels:
-    {{- include "kube-bind-portal.labels" . | nindent 4 }}
+    {{- include "kbind-provider-portal.labels" . | nindent 4 }}
 spec:
   headers:
     accessControlAllowCredentials: true

@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "platform-mesh-kbind-provider.name" -}}
+{{- define "kbind-provider-operator.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 Truncate at 63 chars because some Kubernetes name fields are limited to this.
 If release name contains the chart name it will be used as-is.
 */}}
-{{- define "platform-mesh-kbind-provider.fullname" -}}
+{{- define "kbind-provider-operator.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains the chart name it will be used as-is.
 {{/*
 Create chart label value (name + version).
 */}}
-{{- define "platform-mesh-kbind-provider.chart" -}}
+{{- define "kbind-provider-operator.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels.
 */}}
-{{- define "platform-mesh-kbind-provider.labels" -}}
-helm.sh/chart: {{ include "platform-mesh-kbind-provider.chart" . }}
-{{ include "platform-mesh-kbind-provider.selectorLabels" . }}
+{{- define "kbind-provider-operator.labels" -}}
+helm.sh/chart: {{ include "kbind-provider-operator.chart" . }}
+{{ include "kbind-provider-operator.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels.
 */}}
-{{- define "platform-mesh-kbind-provider.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "platform-mesh-kbind-provider.name" . }}
+{{- define "kbind-provider-operator.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "kbind-provider-operator.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 ServiceAccount name.
 */}}
-{{- define "platform-mesh-kbind-provider.serviceAccountName" -}}
+{{- define "kbind-provider-operator.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "platform-mesh-kbind-provider.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "kbind-provider-operator.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -64,6 +64,6 @@ ServiceAccount name.
 {{/*
 Kubeconfig mount path derived from the configured key.
 */}}
-{{- define "platform-mesh-kbind-provider.kubeconfigPath" -}}
+{{- define "kbind-provider-operator.kubeconfigPath" -}}
 {{- printf "/etc/kbind/%s" .Values.kcpKubeconfigKey }}
 {{- end }}

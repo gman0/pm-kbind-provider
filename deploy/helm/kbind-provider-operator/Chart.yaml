@@ -1,5 +1,5 @@
 apiVersion: v2
-name: platform-mesh-kbind-provider
+name: kbind-provider-operator
 description: Platform Mesh kbind provider operator
 type: application
 # NOTE: updated by the release pipeline — do not edit manually.

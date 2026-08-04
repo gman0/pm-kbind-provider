@@ -38,7 +38,7 @@ go run cmd/init/main.go --kcp-kubeconfig $PM_KUBECONFIG \
 Extract the generated backend kubeconfig from kcp:
 
 ```bash
-KUBECONFIG=$PM_KUBECONFIG kubectl get secret kube-bind-backend-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > backend.kubeconfig
+KUBECONFIG=$PM_KUBECONFIG kubectl get secret kube-bind-provider-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > backend.kubeconfig
 ```
 
 ## 3. Run the Backend
