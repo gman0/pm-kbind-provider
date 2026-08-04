@@ -29,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -46,6 +47,8 @@ import (
 const (
 	leaseNamespace       = "kbind"
 	leaseDurationSeconds = 60
+
+	leaseCleanupFinalizer = "kube-bind-provider.platform-mesh.io/lease-cleanup"
 
 	condConnected = "Connected"
 	condReady     = "Ready"
@@ -161,6 +164,18 @@ func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if !kbc.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, r.handleDeletion(ctx, c, kbc)
+	}
+
+	if !controllerutil.ContainsFinalizer(kbc, leaseCleanupFinalizer) {
+		controllerutil.AddFinalizer(kbc, leaseCleanupFinalizer)
+		if err := c.Update(ctx, kbc); err != nil {
+			return ctrl.Result{}, fmt.Errorf("adding finalizer: %w", err)
+		}
+		return ctrl.Result{}, nil
+	}
+
 	// Snapshot status fields that must not be re-read after mutation.
 	origLeaseRef := kbc.Status.LeaseRef
 	origLocalUID := kbc.Status.LocalClusterUID
@@ -183,6 +198,26 @@ func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.
 	}
 
 	return ctrl.Result{RequeueAfter: leaseDurationSeconds * time.Second}, nil
+}
+
+// handleDeletion deletes the heartbeat Lease referenced in status (if any) and
+// removes the cleanup finalizer so the KbindCluster can be garbage-collected.
+func (r *KbindClusterReconciler) handleDeletion(ctx context.Context, c client.Client, kbc *kbpv1alpha1.KbindCluster) error {
+	if ref := kbc.Status.LeaseRef; ref != nil {
+		lease := &coordinationv1.Lease{}
+		err := c.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, lease)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("getting lease %s/%s: %w", ref.Namespace, ref.Name, err)
+		}
+		if err == nil {
+			if err := c.Delete(ctx, lease); err != nil && !apierrors.IsNotFound(err) {
+				return fmt.Errorf("deleting lease %s/%s: %w", ref.Namespace, ref.Name, err)
+			}
+		}
+	}
+
+	controllerutil.RemoveFinalizer(kbc, leaseCleanupFinalizer)
+	return c.Update(ctx, kbc)
 }
 
 // reconcileStatus looks up the heartbeat Lease and updates the KbindCluster

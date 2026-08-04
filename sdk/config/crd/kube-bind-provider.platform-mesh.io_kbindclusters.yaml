@@ -59,31 +59,48 @@ spec:
           metadata:
             type: object
           spec:
-            default: {}
             description: KbindClusterSpec is the desired state set by the portal at
               bundle-generation time.
             properties:
-              apis:
-                description: |-
-                  apis is the set of exported APIs included in this bundle, identified by
-                  CRD name ("<plural>.<group>"). An empty or absent list means "all APIs
-                  exported by this provider"; the generated bundle sets Connection.autoBind=true
-                  and omits the ClusterBinding. A non-empty list generates a ClusterBinding
-                  covering exactly these APIs.
-                items:
-                  description: |-
-                    APIRef identifies an exported API by its CRD name on the provider,
-                    i.e. "<plural>.<group>" (for example "cowboys.wildwest.platform-mesh.io").
-                  properties:
-                    name:
-                      description: name is the CRD name of the exported API, "<plural>.<group>".
-                      minLength: 1
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
-                x-kubernetes-list-type: atomic
+              bundleAPIs:
+                description: bundleAPIs defines which provider-exported APIs are included
+                  in this bundle.
+                properties:
+                  all:
+                    description: |-
+                      all, when true, means this bundle covers all APIs exported by this
+                      provider. Mutually exclusive with apis. Immutable once set.
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: all is immutable once set
+                      rule: oldSelf == self
+                  apis:
+                    description: |-
+                      apis is the explicit set of exported APIs included in this bundle,
+                      identified by CRD name ("<plural>.<group>"). Must contain at least one
+                      entry when all is false. Must be empty when all is true.
+                    items:
+                      description: |-
+                        APIRef identifies an exported API by its CRD name on the provider,
+                        i.e. "<plural>.<group>" (for example "cowboys.wildwest.platform-mesh.io").
+                      properties:
+                        name:
+                          description: name is the CRD name of the exported API, "<plural>.<group>".
+                          minLength: 1
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                type: object
+                x-kubernetes-validations:
+                - message: apis must have at least one item when all is false
+                  rule: self.all || size(self.apis) >= 1
+                - message: apis must be empty when all is true
+                  rule: '!self.all || size(self.apis) == 0'
+            required:
+            - bundleAPIs
             type: object
           status:
             description: KbindClusterStatus is the observed state updated by the KbindClusterReconciler.
@@ -193,6 +210,8 @@ spec:
                 - message: localClusterUID is immutable once set
                   rule: oldSelf == '' || self == oldSelf
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

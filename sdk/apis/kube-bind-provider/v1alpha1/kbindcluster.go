@@ -37,9 +37,8 @@ type KbindCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +optional
-	// +kubebuilder:default={}
-	Spec KbindClusterSpec `json:"spec,omitempty"`
+	// +kubebuilder:validation:Required
+	Spec KbindClusterSpec `json:"spec"`
 
 	// +optional
 	Status KbindClusterStatus `json:"status,omitempty"`
@@ -47,11 +46,30 @@ type KbindCluster struct {
 
 // KbindClusterSpec is the desired state set by the portal at bundle-generation time.
 type KbindClusterSpec struct {
-	// apis is the set of exported APIs included in this bundle, identified by
-	// CRD name ("<plural>.<group>"). An empty or absent list means "all APIs
-	// exported by this provider"; the generated bundle sets Connection.autoBind=true
-	// and omits the ClusterBinding. A non-empty list generates a ClusterBinding
-	// covering exactly these APIs.
+	// bundleAPIs defines which provider-exported APIs are included in this bundle.
+	//
+	// +kubebuilder:validation:Required
+	BundleAPIs BundleAPIs `json:"bundleAPIs"`
+}
+
+// BundleAPIs defines which provider-exported APIs are covered by a KbindCluster bundle.
+// Exactly one of all or apis must express the selection:
+//   - all: true    — the bundle covers every API exported by this provider.
+//   - apis non-empty — the bundle covers exactly the listed APIs.
+//
+// +kubebuilder:validation:XValidation:rule="self.all || size(self.apis) >= 1",message="apis must have at least one item when all is false"
+// +kubebuilder:validation:XValidation:rule="!self.all || size(self.apis) == 0",message="apis must be empty when all is true"
+type BundleAPIs struct {
+	// all, when true, means this bundle covers all APIs exported by this
+	// provider. Mutually exclusive with apis. Immutable once set.
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="oldSelf == self",message="all is immutable once set"
+	All bool `json:"all,omitempty"`
+
+	// apis is the explicit set of exported APIs included in this bundle,
+	// identified by CRD name ("<plural>.<group>"). Must contain at least one
+	// entry when all is false. Must be empty when all is true.
 	//
 	// +optional
 	// +listType=atomic

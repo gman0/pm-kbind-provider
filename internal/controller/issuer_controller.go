@@ -127,10 +127,10 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req mcreconcile.Reques
 	return reconcile.Result{}, nil
 }
 
-func consumerWorkspaceURL(virtualHost, clusterName string) (string, error) {
-	u, err := url.Parse(virtualHost)
+func consumerWorkspaceURL(vwHost, clusterName string) (string, error) {
+	u, err := url.Parse(vwHost)
 	if err != nil {
-		return "", fmt.Errorf("parsing host %q: %w", virtualHost, err)
+		return "", fmt.Errorf("parsing host %q: %w", vwHost, err)
 	}
 	return u.Scheme + "://" + u.Host + "/clusters/" + clusterName, nil
 }

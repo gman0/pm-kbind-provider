@@ -114,10 +114,7 @@ export class ConnectClusterComponent implements OnInit {
   editGeneratedYAML = signal('');
   saving = signal(false);
 
-  editIsAutoBind = computed(() => {
-    const c = this.editingCluster();
-    return !c?.spec?.apis || c.spec.apis.length === 0;
-  });
+  editIsAutoBind = computed(() => this.editingCluster()?.spec?.bundleAPIs?.all === true);
 
   editAvailableAPIs = computed(() => {
     const pairs = this.allResourcePairs();
@@ -234,7 +231,7 @@ export class ConnectClusterComponent implements OnInit {
     const apiRefs = autoBind ? [] : apis.map(a => ({ name: a }));
     this.bindingsService.createKbindCluster({
       metadata: { name },
-      spec: { apis: apiRefs },
+      spec: { bundleAPIs: autoBind ? { all: true } : { apis: apiRefs } },
     }).subscribe({
       next: () => {
         this.creating.set(false);
@@ -282,14 +279,14 @@ export class ConnectClusterComponent implements OnInit {
 
   openEditDialog(cluster: KbindCluster): void {
     this.editingCluster.set(cluster);
-    const preSelected = new Set((cluster.spec?.apis ?? []).map(a => a.name));
+    const preSelected = new Set<string>((cluster.spec?.bundleAPIs?.apis ?? []).map(a => a.name));
     this.editSelectedAPIs.set(preSelected);
     this.editOriginalAPIs.set(new Set(preSelected));
     this.editHideSystemAPIs.set(true);
     this.saving.set(false);
 
     const kubeconfig = this.kubeconfig();
-    const autoBind = !cluster.spec?.apis || cluster.spec.apis.length === 0;
+    const autoBind = cluster.spec?.bundleAPIs?.all === true;
     const apis = [...preSelected].sort();
     this.editGeneratedYAML.set(
       kubeconfig ? this.assembleBundle(cluster.metadata.name, apis, kubeconfig, autoBind) : ''
@@ -415,7 +412,8 @@ export class ConnectClusterComponent implements OnInit {
   }
 
   getAPISummary(cluster: KbindCluster): string {
-    const apis = cluster.spec?.apis;
+    if (cluster.spec?.bundleAPIs?.all) return 'All APIs';
+    const apis = cluster.spec?.bundleAPIs?.apis;
     if (!apis || apis.length === 0) return 'All APIs';
     if (apis.length <= 2) return apis.map(a => a.name).join(', ');
     return `${apis[0].name}, ${apis[1].name} +${apis.length - 2} more`;

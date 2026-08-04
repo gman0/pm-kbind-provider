@@ -29,7 +29,7 @@ spec:
   resources:
   - group: kube-bind-provider.platform-mesh.io
     name: kbindclusters
-    schema: v260803-a524d45.kbindclusters.kube-bind-provider.platform-mesh.io
+    schema: v260804-c8080c2.kbindclusters.kube-bind-provider.platform-mesh.io
     storage:
       crd: {}
 status: {}

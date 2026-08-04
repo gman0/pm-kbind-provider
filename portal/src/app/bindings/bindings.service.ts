@@ -39,7 +39,7 @@ export interface KbindClusterCondition {
 
 export interface KbindCluster {
   metadata: { name: string; creationTimestamp?: string };
-  spec?: { apis?: Array<{ name: string }> };
+  spec?: { bundleAPIs?: { all?: boolean; apis?: Array<{ name: string }> } };
   status?: {
     localClusterUID?: string;
     lastHeartbeatTime?: string;
@@ -91,7 +91,7 @@ const LIST_KBIND_CLUSTERS_QUERY = `
         KbindClusters {
           items {
             metadata { name creationTimestamp }
-            spec { apis { name } }
+            spec { bundleAPIs { all apis { name } } }
             status {
               localClusterUID
               lastHeartbeatTime
@@ -131,8 +131,8 @@ export class BindingsService {
 
   private buildKbindClusterYAML(name: string, apis: Array<{ name: string }>): string {
     const specLines = apis.length === 0
-      ? ['spec: {}']
-      : ['spec:', '  apis:', ...apis.map(a => `    - name: ${a.name}`)];
+      ? ['spec:', '  bundleAPIs:', '    all: true']
+      : ['spec:', '  bundleAPIs:', '    apis:', ...apis.map(a => `      - name: ${a.name}`)];
     return [
       'apiVersion: kube-bind-provider.platform-mesh.io/v1alpha1',
       'kind: KbindCluster',
@@ -229,7 +229,7 @@ export class BindingsService {
   createKbindCluster(cluster: KbindCluster): Observable<KbindCluster | null> {
     return this.getGraphQLConfig().pipe(
       switchMap(({ endpoint, token }) => {
-        const yaml = this.buildKbindClusterYAML(cluster.metadata.name, cluster.spec?.apis ?? []);
+        const yaml = this.buildKbindClusterYAML(cluster.metadata.name, cluster.spec?.bundleAPIs?.apis ?? []);
         return from(
           fetch(endpoint, {
             method: 'POST',
