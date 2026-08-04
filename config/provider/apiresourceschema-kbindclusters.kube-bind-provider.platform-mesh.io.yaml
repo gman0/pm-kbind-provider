@@ -1,7 +1,7 @@
 apiVersion: apis.kcp.io/v1alpha1
 kind: APIResourceSchema
 metadata:
-  name: v260804-c8080c2.kbindclusters.kube-bind-provider.platform-mesh.io
+  name: v260804-cf17c99.kbindclusters.kube-bind-provider.platform-mesh.io
 spec:
   group: kube-bind-provider.platform-mesh.io
   names:
@@ -92,9 +92,9 @@ spec:
               type: object
               x-kubernetes-validations:
               - message: apis must have at least one item when all is false
-                rule: self.all || size(self.apis) >= 1
+                rule: self.all || (has(self.apis) && size(self.apis) >= 1)
               - message: apis must be empty when all is true
-                rule: '!self.all || size(self.apis) == 0'
+                rule: '!self.all || !has(self.apis) || size(self.apis) == 0'
           required:
           - bundleAPIs
           type: object

@@ -57,8 +57,8 @@ type KbindClusterSpec struct {
 //   - all: true    — the bundle covers every API exported by this provider.
 //   - apis non-empty — the bundle covers exactly the listed APIs.
 //
-// +kubebuilder:validation:XValidation:rule="self.all || size(self.apis) >= 1",message="apis must have at least one item when all is false"
-// +kubebuilder:validation:XValidation:rule="!self.all || size(self.apis) == 0",message="apis must be empty when all is true"
+// +kubebuilder:validation:XValidation:rule="self.all || (has(self.apis) && size(self.apis) >= 1)",message="apis must have at least one item when all is false"
+// +kubebuilder:validation:XValidation:rule="!self.all || !has(self.apis) || size(self.apis) == 0",message="apis must be empty when all is true"
 type BundleAPIs struct {
 	// all, when true, means this bundle covers all APIs exported by this
 	// provider. Mutually exclusive with apis. Immutable once set.
