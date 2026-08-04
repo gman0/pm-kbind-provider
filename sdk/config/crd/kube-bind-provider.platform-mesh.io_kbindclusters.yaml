@@ -94,11 +94,6 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                 type: object
-                x-kubernetes-validations:
-                - message: apis must have at least one item when all is false
-                  rule: self.all || (has(self.apis) && size(self.apis) >= 1)
-                - message: apis must be empty when all is true
-                  rule: '!self.all || !has(self.apis) || size(self.apis) == 0'
             required:
             - bundleAPIs
             type: object
