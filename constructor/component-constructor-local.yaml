@@ -1,16 +1,16 @@
 # Local-only OCM component descriptor — used by hack/push-local.sh.
 #
-# Contains only chart resources (no image resources). Images are loaded into the
-# kind cluster separately via `make kind-load-all`; the OCM controller delivers
-# them via the chart values rather than OCM image relocation.
+# hack/push-local.sh copies prerelease chart directories and this file into
+# $BUILD_DIR, then runs `ocm add components` from $BUILD_DIR. Paths below are
+# therefore relative to $BUILD_DIR (i.e. siblings of this file at runtime).
+#
+# No image resources — images are loaded into kind separately via `make kind-load-all`.
 #
 # Template variables (go templater):
-#   VERSION          — component version (e.g. 0.0.0-dev)
-#   CHART_VERSION    — chart version tag in the local registry
-#   LOCAL_HELM_REPO  — OCI base path for charts in the local registry
-#                      (e.g. oci-registry-docker-registry.registry.svc.cluster.local/platform-mesh/kube-bind-provider/charts)
+#   VERSION        — component version (e.g. 0.0.0-dev)
+#   CHART_VERSION  — chart version embedded in the OCI artifact tag
 components:
-  - name: github.com/platform-mesh/kube-bind-provider
+  - name: github.com/platform-mesh/kbind-provider
     version: {{ .VERSION }}
     provider:
       name: platform-mesh
@@ -18,14 +18,14 @@ components:
       - name: operator-chart
         type: helmChart
         version: {{ .CHART_VERSION }}
-        relation: local
-        access:
-          type: ociArtifact
-          imageReference: {{ .LOCAL_HELM_REPO }}/kbind-provider-operator:{{ .CHART_VERSION }}
+        input:
+          type: helm
+          path: ./kbind-provider-operator
+          version: {{ .CHART_VERSION }}
       - name: portal-chart
         type: helmChart
         version: {{ .CHART_VERSION }}
-        relation: local
-        access:
-          type: ociArtifact
-          imageReference: {{ .LOCAL_HELM_REPO }}/kbind-provider-portal:{{ .CHART_VERSION }}
+        input:
+          type: helm
+          path: ./kbind-provider-portal
+          version: {{ .CHART_VERSION }}

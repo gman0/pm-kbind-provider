@@ -48,6 +48,11 @@ OPERATOR_BINARY_NAME = operator
 # Build directory
 BUILD_DIR = bin
 
+# Container runtime (docker or podman; auto-detected if not set)
+ifeq ($(origin CONTAINER_RUNTIME),undefined)
+  CONTAINER_RUNTIME := $(shell command -v docker 2>/dev/null || command -v podman 2>/dev/null || echo docker)
+endif
+
 # Image parameters
 IMAGE_REGISTRY ?= ghcr.io/platform-mesh
 IMAGE_TAG ?= dev
@@ -103,22 +108,22 @@ tidy:
 ## operator-image-build: Build operator container image locally
 .PHONY: operator-image-build
 operator-image-build:
-	docker build -t $(OPERATOR_IMAGE) -f deploy/Dockerfile .
+	$(CONTAINER_RUNTIME) build -t $(OPERATOR_IMAGE) -f deploy/Dockerfile .
 
 ## operator-image-push: Push operator container image to registry
 .PHONY: operator-image-push
 operator-image-push: operator-image-build
-	docker push $(OPERATOR_IMAGE)
+	$(CONTAINER_RUNTIME) push $(OPERATOR_IMAGE)
 
 ## portal-image-build: Build portal container image locally
 .PHONY: portal-image-build
 portal-image-build:
-	docker build -t $(PORTAL_IMAGE) -f deploy/portal.Dockerfile .
+	$(CONTAINER_RUNTIME) build -t $(PORTAL_IMAGE) -f deploy/portal.Dockerfile .
 
 ## portal-image-push: Push portal container image to registry
 .PHONY: portal-image-push
 portal-image-push: portal-image-build
-	docker push $(PORTAL_IMAGE)
+	$(CONTAINER_RUNTIME) push $(PORTAL_IMAGE)
 
 ## images: Build all container images
 .PHONY: images
@@ -148,24 +153,24 @@ kind-load-all: kind-load-operator kind-load-portal
 ## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
 .PHONY: portal-run
 portal-run:
-	docker run --rm -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
+	$(CONTAINER_RUNTIME) run --rm -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
 
 ## portal-run-detached: Run portal container in background
 .PHONY: portal-run-detached
 portal-run-detached:
-	docker run -d --rm --name kbind-provider-portal -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
+	$(CONTAINER_RUNTIME) run -d --rm --name kbind-provider-portal -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
 	@echo "Portal running at http://localhost:$(PORTAL_PORT)"
-	@echo "Stop with: docker stop kbind-provider-portal"
+	@echo "Stop with: $(CONTAINER_RUNTIME) stop kbind-provider-portal"
 
 ## portal-stop: Stop the portal container
 .PHONY: portal-stop
 portal-stop:
-	docker stop kbind-provider-portal
+	$(CONTAINER_RUNTIME) stop kbind-provider-portal
 
 # Refresh the operator chart's bundled CRDs from the generated sdk CRDs.
 .PHONY: helm-sync-crds
 helm-sync-crds: codegen
-	cp sdk/config/crd/kube-bind-provider.platform-mesh.io_*.yaml $(OPERATOR_CHART)/crds/
+	cp sdk/config/crd/kbind-provider.platform-mesh.io_*.yaml $(OPERATOR_CHART)/crds/
 
 .PHONY: codegen
 codegen: $(CONTROLLER_GEN) $(KCP_APIGEN_GEN) $(YAML_PATCH)
@@ -208,12 +213,24 @@ HELM_CHARTS ?= kbind-provider-operator kbind-provider-portal
 # Helm chart that ships the operator and its CRDs.
 OPERATOR_CHART ?= deploy/helm/kbind-provider-operator
 
+## ocm-stamp-chart-versions: Stamp each chart's Chart.yaml version and appVersion
+# Required before ocm-build: OCM's `input: type: helm` embeds charts from disk, so
+# Chart.yaml must carry the correct version for Flux HelmRelease to accept the chart
+# (it rejects charts where the OCI tag and Chart.yaml version differ). Also stamps
+# appVersion so charts that fall back to .Chart.AppVersion for the image tag pull
+# the correct release image instead of the hardcoded placeholder.
+.PHONY: ocm-stamp-chart-versions
+ocm-stamp-chart-versions:
+	@for chart in $(HELM_CHARTS); do \
+	  echo "==> stamping deploy/helm/$$chart/Chart.yaml version=$(CHART_VERSION) appVersion=$(IMAGE_VERSION)"; \
+	  yq -i '.version = "$(CHART_VERSION)" | .appVersion = "$(IMAGE_VERSION)"' deploy/helm/$$chart/Chart.yaml || exit 1; \
+	done
+
 ## ocm-build: Build OCM component archive (CTF) from constructor/component-constructor.yaml
-# NOTE: the component references our portal chart as a published OCI artifact, so run
-# `make helm-push` first (or use `make ocm-release`, which chains them) — otherwise OCM
-# cannot resolve the portal chart's digest here.
+# Charts are embedded directly from deploy/helm/ via `input: type: helm`.
+# Run `make helm-deps` first to ensure chart dependencies are fetched.
 .PHONY: ocm-build
-ocm-build:
+ocm-build: ocm-stamp-chart-versions
 	mkdir -p $(dir $(OCM_CTF))
 	rm -rf $(OCM_CTF)
 	$(OCM) add components -c --templater=go --file $(OCM_CTF) constructor/component-constructor.yaml -- \
@@ -222,10 +239,9 @@ ocm-build:
 	  IMAGE_VERSION=$(IMAGE_VERSION) \
 	  OCI_TAG=$(OCI_TAG)
 
-## ocm-push: Transfer the OCM component to $(OCM_REPO), relocating ALL resources by-value
-# --copy-resources / --copy-local-resources pull the referenced external artifacts (upstream
-# backend chart + image) and this repo's images into $(OCM_REPO), and publish the embedded
-# charts as OCI artifacts there — making the component fully self-contained.
+## ocm-push: Transfer the OCM component archive to $(OCM_REPO)
+# --copy-resources / --copy-local-resources relocate the image OCI references into
+# $(OCM_REPO), making the component fully self-contained.
 .PHONY: ocm-push
 ocm-push: ocm-build
 	$(OCM) transfer ctf --overwrite --copy-resources --copy-local-resources $(OCM_CTF) $(OCM_REPO)

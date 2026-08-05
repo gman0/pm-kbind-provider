@@ -1,7 +1,7 @@
 - op: add
   path: /metadata/labels
   value:
-    "ui.platform-mesh.io/content-for": kube-bind-provider.platform-mesh.io
+    "ui.platform-mesh.io/content-for": kbind-provider.platform-mesh.io
 - op: add
   path: /spec/permissionClaims
   value:

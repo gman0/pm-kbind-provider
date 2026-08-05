@@ -17,5 +17,5 @@ limitations under the License.
 // Package v1alpha1 contains the provider-side kbind API types.
 //
 // +kubebuilder:object:generate=true
-// +groupName=kube-bind-provider.platform-mesh.io
+// +groupName=kbind-provider.platform-mesh.io
 package v1alpha1

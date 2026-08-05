@@ -23,7 +23,7 @@ import (
 
 const (
 	// GroupName is the API group for provider-side kbind objects.
-	GroupName = "kube-bind-provider.platform-mesh.io"
+	GroupName = "kbind-provider.platform-mesh.io"
 
 	// Version is the API version of this package.
 	Version = "v1alpha1"
