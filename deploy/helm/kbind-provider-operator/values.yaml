@@ -21,13 +21,13 @@ fullnameOverride: ""
 # -- Name of the pre-existing Secret that holds the kcp provider workspace kubeconfig.
 # Both the init container and the operator mount this to connect to kcp.
 # The Secret must exist before the chart is installed.
-kcpKubeconfigSecret: pm-kbind-provider-kubeconfig
+kcpKubeconfigSecret: kbind-provider-kubeconfig
 # -- Key within the Secret that contains the kubeconfig data
 kcpKubeconfigKey: kubeconfig
 
 # -- Name of the APIExportEndpointSlice the kbind-provider-operator-operator watches.
 # Must match the APIExport name created in the kcp provider workspace by operator init.
-endpointSliceName: kube-bind-provider.platform-mesh.io
+endpointSliceName: kbind-provider.platform-mesh.io
 
 serviceAccount:
   # -- Whether to create a ServiceAccount for the operator pod
