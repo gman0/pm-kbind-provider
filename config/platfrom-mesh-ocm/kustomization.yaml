@@ -21,7 +21,7 @@ patches:
       group: providers.platform-mesh.io
       version: v1alpha1
       kind: ManagedProvider
-      name: kube-bind
+      name: kbind
     patch: |
       - op: replace
         path: /spec/runtimeDeployments/0/ocm/values/hostAliases/0/ip

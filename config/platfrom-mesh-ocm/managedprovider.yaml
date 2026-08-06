@@ -1,4 +1,4 @@
-# ManagedProvider — OCM delivery of the kube-bind provider.
+# ManagedProvider — OCM delivery of the kbind provider.
 #
 # The platform-mesh-operator drives the full lifecycle:
 #   1. WaitPlatformMesh - waits for the referenced PlatformMesh to be Ready.
@@ -23,7 +23,7 @@
 apiVersion: providers.platform-mesh.io/v1alpha1
 kind: ManagedProvider
 metadata:
-  name: kube-bind
+  name: kbind
   namespace: platform-mesh-system
 spec:
   platformMeshRef:
@@ -33,7 +33,7 @@ spec:
 
   runtimeDeployments:
     # ---- kbind-provider operator (via our OCM component) --------------------
-    # Resolves the `operator-chart` resource of our kube-bind-provider OCM component.
+    # Resolves the `operator-chart` resource of our kbind-provider OCM component.
     # `name` sets the generated Repository/Component/Resource/OCIRepository/HelmRelease
     # names (required so operator and portal — same component — don't collide).
     - ocm:
@@ -58,7 +58,7 @@ spec:
                 - kcp.localhost
                 - localhost
 
-    # ---- kube-bind portal (Angular UI, via OCM) ------------------------------
+    # ---- kbind portal (Angular UI, via OCM) ------------------------------
     # Resolves the `portal-chart` resource of the same OCM component. The portal needs no
     # kubeconfig; it is exposed through the platform Gateway.
     - ocm:

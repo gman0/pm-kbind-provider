@@ -1,8 +1,8 @@
 # `config/platfrom-mesh-ocm` — ManagedProvider via OCM
 
-Deploys the kube-bind provider (operator + Angular portal) onto a PlatformMesh runtime
+Deploys the kbind provider (operator + Angular portal) onto a PlatformMesh runtime
 cluster from a **single, self-contained OCM component**,
-`github.com/platform-mesh/kube-bind-provider`, published by this repo.
+`github.com/platform-mesh/kbind-provider`, published by this repo.
 
 ```sh
 kubectl apply -k config/platfrom-mesh-ocm
@@ -17,7 +17,6 @@ The OCM component bundles everything the provider needs:
 | `operator-chart` | helmChart (local) | `kbind-provider-operator` chart, packaged + pushed by `make helm-push` |
 | `portal-chart`   | helmChart (local) | `kbind-provider-portal` chart, packaged + pushed by `make helm-push` |
 | `operator-image` | ociImage (local)  | `ghcr.io/platform-mesh/kbind-provider-operator` |
-| `init-image`     | ociImage (local)  | `ghcr.io/platform-mesh/kube-bind-provider-init` |
 | `portal-image`   | ociImage (local)  | `ghcr.io/platform-mesh/kbind-provider-portal` |
 
 (The kcp bootstrap manifests under `config/` are embedded in the init image via `go:embed`,
@@ -40,7 +39,7 @@ via Flux (`OCIRepository` + `HelmRelease`).
 ocm:
   name: kbind-provider-operator                          # generated object names
   registry: ghcr.io/platform-mesh                        # → Repository (created by operator)
-  component: github.com/platform-mesh/kube-bind-provider # → Component  (created by operator)
+  component: github.com/platform-mesh/kbind-provider # → Component  (created by operator)
   version: "0.0.1"
   resourceName: operator-chart                           # resource within the component
   values: {...}                                          # Helm values (how to configure)
@@ -51,7 +50,7 @@ component and would otherwise collide on the generated object names.
 
 The operator lifecycle (WaitPlatformMesh → ProviderResource → WaitProvider →
 KubeconfigCopy → Deploy) provisions a dedicated kcp provider workspace and copies a scoped
-admin kubeconfig into `platform-mesh-system` as Secret `kube-bind-provider-kubeconfig`. The
+admin kubeconfig into `platform-mesh-system` as Secret `kbind-provider-kubeconfig`. The
 operator mounts this kubeconfig to connect to the kcp provider workspace.
 
 ## Prerequisites
