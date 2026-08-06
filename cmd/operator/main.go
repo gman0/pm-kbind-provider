@@ -40,7 +40,7 @@ import (
 	mcmanager "sigs.k8s.io/multicluster-runtime/pkg/manager"
 
 	"github.com/platform-mesh/kube-bind-provider/internal/controller"
-	kbpv1alpha1 "github.com/platform-mesh/kube-bind-provider/sdk/apis/kube-bind-provider/v1alpha1"
+	kbpv1alpha1 "github.com/platform-mesh/kube-bind-provider/sdk/apis/kbind-provider/v1alpha1"
 )
 
 type operatorOptions struct {

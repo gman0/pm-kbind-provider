@@ -41,7 +41,7 @@ import (
 	"sigs.k8s.io/multicluster-runtime/pkg/multicluster"
 	mcreconcile "sigs.k8s.io/multicluster-runtime/pkg/reconcile"
 
-	kbpv1alpha1 "github.com/platform-mesh/kube-bind-provider/sdk/apis/kube-bind-provider/v1alpha1"
+	kbpv1alpha1 "github.com/platform-mesh/kube-bind-provider/sdk/apis/kbind-provider/v1alpha1"
 )
 
 const (

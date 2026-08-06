@@ -197,6 +197,11 @@ OCM_REPO ?= ghcr.io/platform-mesh
 OCM_CTF ?= .ocm/transport.ctf
 # Component name (must match constructor/component-constructor.yaml).
 OCM_COMPONENT ?= github.com/platform-mesh/kbind-provider
+# Component constructor file. The local variant omits image resources (images are loaded
+# into kind via `kind load` instead), avoiding the need for ghcr.io access during build.
+#   make ocm-build                                    # release: resolves images from ghcr.io
+#   OCM_CONSTRUCTOR=constructor/component-constructor-local.yaml make ocm-build  # local dev
+OCM_CONSTRUCTOR ?= constructor/component-constructor.yaml
 # Charts are published under this repo's own GHCR namespace (self-contained, alongside
 # the container images) rather than the shared helm-charts registry.
 HELM_REPO ?= ghcr.io/platform-mesh/kbind-provider/charts
@@ -233,11 +238,12 @@ ocm-stamp-chart-versions:
 ocm-build: ocm-stamp-chart-versions
 	mkdir -p $(dir $(OCM_CTF))
 	rm -rf $(OCM_CTF)
-	$(OCM) add components -c --templater=go --file $(OCM_CTF) constructor/component-constructor.yaml -- \
+	$(OCM) add components -c --templater=go --file $(OCM_CTF) $(OCM_CONSTRUCTOR) -- \
 	  VERSION=$(VERSION) \
 	  CHART_VERSION=$(CHART_VERSION) \
 	  IMAGE_VERSION=$(IMAGE_VERSION) \
-	  OCI_TAG=$(OCI_TAG)
+	  OCI_TAG=$(OCI_TAG) \
+	  IMAGE_REGISTRY=$(IMAGE_REGISTRY)
 
 ## ocm-push: Transfer the OCM component archive to $(OCM_REPO)
 # --copy-resources / --copy-local-resources relocate the image OCI references into
@@ -278,10 +284,6 @@ helm-push:
 	  $(HELM) push $(BUILD_DIR)/charts/$$chart-$(CHART_VERSION).tgz oci://$(HELM_REPO) || exit 1; \
 	done
 
-## local-push: Build and push OCM artifacts to the local kind cluster registry (requires ocm-transfer-pod)
-.PHONY: local-push
-local-push:
-	hack/push-local.sh
 
 ## help: Display this help
 .PHONY: help

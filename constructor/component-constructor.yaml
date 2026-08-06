@@ -42,18 +42,11 @@ components:
         version: {{ .IMAGE_VERSION }}
         access:
           type: ociArtifact
-          imageReference: ghcr.io/platform-mesh/kbind-provider-operator:{{ .OCI_TAG }}
-      - name: init-image
-        type: ociImage
-        relation: local
-        version: {{ .IMAGE_VERSION }}
-        access:
-          type: ociArtifact
-          imageReference: ghcr.io/platform-mesh/kube-bind-provider-init:{{ .OCI_TAG }}
+          imageReference: {{ .IMAGE_REGISTRY }}/kbind-provider-operator:{{ .OCI_TAG }}
       - name: portal-image
         type: ociImage
         relation: local
         version: {{ .IMAGE_VERSION }}
         access:
           type: ociArtifact
-          imageReference: ghcr.io/platform-mesh/kbind-provider-portal:{{ .OCI_TAG }}
+          imageReference: {{ .IMAGE_REGISTRY }}/kbind-provider-portal:{{ .OCI_TAG }}
