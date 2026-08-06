@@ -1,4 +1,4 @@
-# OCM component descriptor for the PlatformMesh kube-bind provider.
+# OCM component descriptor for the PlatformMesh kbind provider.
 #
 # Templated by `make ocm-build` (go templater). Helm charts are embedded directly
 # from deploy/helm/ via `input: type: helm` — no pre-push to an OCI registry needed.

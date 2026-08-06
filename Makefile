@@ -139,12 +139,12 @@ KIND_CLUSTER ?= platform-mesh
 ## kind-load-operator: Load operator image into kind cluster
 .PHONY: kind-load-operator
 kind-load-operator:
-	kind load docker-image $(OPERATOR_IMAGE) --name $(KIND_CLUSTER)
+	$(CONTAINER_RUNTIME) save $(OPERATOR_IMAGE) | kind load image-archive /dev/stdin --name $(KIND_CLUSTER)
 
 ## kind-load-portal: Load portal image into kind cluster
 .PHONY: kind-load-portal
 kind-load-portal:
-	kind load docker-image $(PORTAL_IMAGE) --name $(KIND_CLUSTER)
+	$(CONTAINER_RUNTIME) save $(PORTAL_IMAGE) | kind load image-archive /dev/stdin --name $(KIND_CLUSTER)
 
 ## kind-load-all: Load all images into kind cluster
 .PHONY: kind-load-all
