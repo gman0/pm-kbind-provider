@@ -126,13 +126,13 @@ func mapLease(clusterName multicluster.ClusterName, cl cluster.Cluster) handler.
 		if lease.Annotations["core.kbind.io/consumer-cluster-uid"] == "" {
 			return nil
 		}
-		kbcName := lease.Annotations["core.kbind.io/connection"]
-		if kbcName == "" {
+		ccName := lease.Annotations["core.kbind.io/connection"]
+		if ccName == "" {
 			return nil
 		}
 
 		var kbc kbpv1alpha1.ConnectedCluster
-		if err := cl.GetClient().Get(ctx, types.NamespacedName{Name: kbcName}, &kbc); err != nil {
+		if err := cl.GetClient().Get(ctx, types.NamespacedName{Name: ccName}, &kbc); err != nil {
 			log.FromContext(ctx).Error(err, "getting ConnectedCluster for Lease event")
 			return nil
 		}
@@ -276,14 +276,14 @@ func (r *ConnectedClusterReconciler) reconcileStatus(ctx context.Context, c clie
 }
 
 // findLeaseByConnection returns the first Lease in the kbind namespace whose
-// core.kbind.io/connection annotation matches kbcName, or nil if none exists.
-func (r *ConnectedClusterReconciler) findLeaseByConnection(ctx context.Context, c client.Client, kbcName string) (*coordinationv1.Lease, error) {
+// core.kbind.io/connection annotation matches ccName, or nil if none exists.
+func (r *ConnectedClusterReconciler) findLeaseByConnection(ctx context.Context, c client.Client, ccName string) (*coordinationv1.Lease, error) {
 	var list coordinationv1.LeaseList
 	if err := c.List(ctx, &list,
 		client.InNamespace(leaseNamespace),
-		client.MatchingFields{leaseConnectionIndex: kbcName},
+		client.MatchingFields{leaseConnectionIndex: ccName},
 	); err != nil {
-		return nil, fmt.Errorf("listing leases for %s: %w", kbcName, err)
+		return nil, fmt.Errorf("listing leases for %s: %w", ccName, err)
 	}
 	if len(list.Items) == 0 {
 		return nil, nil

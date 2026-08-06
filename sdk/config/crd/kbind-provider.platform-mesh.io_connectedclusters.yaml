@@ -13,8 +13,6 @@ spec:
     kind: ConnectedCluster
     listKind: ConnectedClusterList
     plural: connectedclusters
-    shortNames:
-    - kbc
     singular: connectedcluster
   scope: Cluster
   versions:

@@ -27,7 +27,7 @@ import (
 // workspace (one per bundle generated).
 //
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster,categories=kbind-provider,shortName=kbc
+// +kubebuilder:resource:scope=Cluster,categories=kbind-provider
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Connected",type=string,JSONPath=`.status.conditions[?(@.type=="Connected")].status`
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
