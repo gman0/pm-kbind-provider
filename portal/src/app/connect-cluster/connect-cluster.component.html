@@ -27,7 +27,7 @@
         </div>
       }
 
-      @if (kbindClusters().length === 0) {
+      @if (connectedClusters().length === 0) {
         <div class="empty-state">
           <ui5-icon name="add" class="empty-icon"></ui5-icon>
           <ui5-title level="H5">No connections yet</ui5-title>
@@ -35,7 +35,7 @@
         </div>
       } @else {
         <div class="connections-list">
-          @for (cluster of kbindClusters(); track cluster.metadata.name) {
+          @for (cluster of connectedClusters(); track cluster.metadata.name) {
             <div class="connection-row">
               <div class="connection-main">
                 <div class="connection-name">

@@ -116,12 +116,12 @@ func runControllers(ctx context.Context, opts *operatorOptions) error {
 		return fmt.Errorf("setting up issuer controller: %w", err)
 	}
 
-	kbindClusterController, err := controller.NewKbindClusterController()
+	connectedClusterController, err := controller.NewConnectedClusterController()
 	if err != nil {
-		return fmt.Errorf("failed to create kbindcluster controller: %w", err)
+		return fmt.Errorf("failed to create connectedcluster controller: %w", err)
 	}
-	if err := kbindClusterController.SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("setting up kbindcluster controller: %w", err)
+	if err := connectedClusterController.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("setting up connectedcluster controller: %w", err)
 	}
 
 	return mgr.Start(ctx)

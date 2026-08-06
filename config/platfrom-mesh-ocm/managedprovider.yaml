@@ -14,7 +14,7 @@
 #                         chart is deployed via Flux (OCIRepository + HelmRelease).
 #
 # The kbind-provider-operator chart consumes the copied provider kubeconfig to connect to
-# the kcp provider workspace, where it manages kube-bind APIExports and consumer bindings.
+# the kcp provider workspace, where it manages kbind APIExports and consumer bindings.
 #
 # Prerequisites:
 #   - the ocm-controller (ocm-k8s-toolkit) is installed in the runtime cluster, and
@@ -40,11 +40,9 @@ spec:
         name: kbind-provider-operator
         registry: ghcr.io/platform-mesh
         component: github.com/platform-mesh/kbind-provider
-        version: "0.0.3"
+        version: "0.0.1"
         resourceName: operator-chart
         values:
-          kcpKubeconfigSecret: kube-bind-provider-kubeconfig
-          endpointSliceName: kube-bind-provider.platform-mesh.io
           # kcp advertises the virtual-workspace endpoint as
           # https://root.kcp.localhost:8443/... which resolves to 127.0.0.1 inside the pod.
           # Pin those hostnames to the in-cluster front-proxy service IP so the operator can
@@ -67,7 +65,7 @@ spec:
         name: kbind-provider-portal
         registry: ghcr.io/platform-mesh
         component: github.com/platform-mesh/kbind-provider
-        version: "0.0.3"
+        version: "0.0.1"
         resourceName: portal-chart
         values:
           httpRoute:

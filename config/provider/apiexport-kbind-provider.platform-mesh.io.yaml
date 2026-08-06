@@ -28,8 +28,13 @@ spec:
     - '*'
   resources:
   - group: kbind-provider.platform-mesh.io
+    name: connectedclusters
+    schema: v260805-6e86fdc.connectedclusters.kbind-provider.platform-mesh.io
+    storage:
+      crd: {}
+  - group: kbind-provider.platform-mesh.io
     name: kbindclusters
-    schema: v260805-6e86fdc.kbindclusters.kbind-provider.platform-mesh.io
+    schema: v260806-17924cb.kbindclusters.kbind-provider.platform-mesh.io
     storage:
       crd: {}
 status: {}

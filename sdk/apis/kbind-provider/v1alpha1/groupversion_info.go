@@ -47,6 +47,6 @@ func Resource(resource string) schema.GroupResource {
 
 func init() {
 	SchemeBuilder.Register(
-		&KbindCluster{}, &KbindClusterList{},
+		&ConnectedCluster{}, &ConnectedClusterList{},
 	)
 }

@@ -48,7 +48,7 @@ const (
 	leaseNamespace       = "kbind"
 	leaseDurationSeconds = 60
 
-	leaseCleanupFinalizer = "kube-bind-provider.platform-mesh.io/lease-cleanup"
+	leaseCleanupFinalizer = "kbind-provider.platform-mesh.io/lease-cleanup"
 
 	condConnected = "Connected"
 	condReady     = "Ready"
@@ -63,18 +63,18 @@ const (
 	leaseConnectionIndex = "lease.connection"
 )
 
-// KbindClusterReconciler watches KbindCluster objects and the heartbeat Leases
-// the konnector maintains on the provider cluster. It updates KbindCluster.status
+// ConnectedClusterReconciler watches ConnectedCluster objects and the heartbeat Leases
+// the konnector maintains on the provider cluster. It updates ConnectedCluster.status
 // to reflect whether the consumer is actively connected.
-type KbindClusterReconciler struct {
+type ConnectedClusterReconciler struct {
 	manager mcmanager.Manager
 }
 
-func NewKbindClusterController() (*KbindClusterReconciler, error) {
-	return &KbindClusterReconciler{}, nil
+func NewConnectedClusterController() (*ConnectedClusterReconciler, error) {
+	return &ConnectedClusterReconciler{}, nil
 }
 
-func (r *KbindClusterReconciler) SetupWithManager(mgr mcmanager.Manager) error {
+func (r *ConnectedClusterReconciler) SetupWithManager(mgr mcmanager.Manager) error {
 	r.manager = mgr
 
 	if err := mgr.GetFieldIndexer().IndexField(
@@ -100,8 +100,8 @@ func (r *KbindClusterReconciler) SetupWithManager(mgr mcmanager.Manager) error {
 	})
 
 	return mcbuilder.ControllerManagedBy(mgr).
-		Named("kbindcluster-controller").
-		For(&kbpv1alpha1.KbindCluster{}).
+		Named("connectedcluster-controller").
+		For(&kbpv1alpha1.ConnectedCluster{}).
 		Watches(
 			&coordinationv1.Lease{},
 			mapLease,
@@ -131,9 +131,9 @@ func mapLease(clusterName multicluster.ClusterName, cl cluster.Cluster) handler.
 			return nil
 		}
 
-		var kbc kbpv1alpha1.KbindCluster
+		var kbc kbpv1alpha1.ConnectedCluster
 		if err := cl.GetClient().Get(ctx, types.NamespacedName{Name: kbcName}, &kbc); err != nil {
-			log.FromContext(ctx).Error(err, "getting KbindCluster for Lease event")
+			log.FromContext(ctx).Error(err, "getting ConnectedCluster for Lease event")
 			return nil
 		}
 
@@ -146,11 +146,11 @@ func mapLease(clusterName multicluster.ClusterName, cl cluster.Cluster) handler.
 	})
 }
 
-// Reconcile drives a KbindCluster toward an accurate status: it finds the
+// Reconcile drives a ConnectedCluster toward an accurate status: it finds the
 // heartbeat Lease matching status.localClusterUID and sets the Connected and
 // Ready conditions accordingly. It requeues every leaseDurationSeconds so a
 // silently-dead konnector (no Lease delete event) is eventually detected.
-func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.Request) (ctrl.Result, error) {
+func (r *ConnectedClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
 	cl, err := r.manager.GetCluster(ctx, req.ClusterName)
@@ -159,7 +159,7 @@ func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.
 	}
 	c := cl.GetClient()
 
-	kbc := &kbpv1alpha1.KbindCluster{}
+	kbc := &kbpv1alpha1.ConnectedCluster{}
 	if err := c.Get(ctx, req.NamespacedName, kbc); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -192,7 +192,7 @@ func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.
 
 	if !statusEqual(origLocalUID, origLeaseRef, origConds, origLastHeartbeat, kbc.Status) {
 		if err := c.Status().Update(ctx, kbc); err != nil {
-			log.Error(err, "updating KbindCluster status")
+			log.Error(err, "updating ConnectedCluster status")
 			return ctrl.Result{}, err
 		}
 	}
@@ -201,8 +201,8 @@ func (r *KbindClusterReconciler) Reconcile(ctx context.Context, req mcreconcile.
 }
 
 // handleDeletion deletes the heartbeat Lease referenced in status (if any) and
-// removes the cleanup finalizer so the KbindCluster can be garbage-collected.
-func (r *KbindClusterReconciler) handleDeletion(ctx context.Context, c client.Client, kbc *kbpv1alpha1.KbindCluster) error {
+// removes the cleanup finalizer so the ConnectedCluster can be garbage-collected.
+func (r *ConnectedClusterReconciler) handleDeletion(ctx context.Context, c client.Client, kbc *kbpv1alpha1.ConnectedCluster) error {
 	if ref := kbc.Status.LeaseRef; ref != nil {
 		lease := &coordinationv1.Lease{}
 		err := c.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, lease)
@@ -220,7 +220,7 @@ func (r *KbindClusterReconciler) handleDeletion(ctx context.Context, c client.Cl
 	return c.Update(ctx, kbc)
 }
 
-// reconcileStatus looks up the heartbeat Lease and updates the KbindCluster
+// reconcileStatus looks up the heartbeat Lease and updates the ConnectedCluster
 // status fields and conditions in place. It does not requeue or return
 // transient errors for missing Leases.
 //
@@ -228,7 +228,7 @@ func (r *KbindClusterReconciler) handleDeletion(ctx context.Context, c client.Cl
 // leaseConnectionIndex (keyed by core.kbind.io/connection == kbc.Name), and the
 // UID is read from Lease.spec.holderIdentity so the two paths share the same
 // connected/stale logic below.
-func (r *KbindClusterReconciler) reconcileStatus(ctx context.Context, c client.Client, kbc *kbpv1alpha1.KbindCluster) error {
+func (r *ConnectedClusterReconciler) reconcileStatus(ctx context.Context, c client.Client, kbc *kbpv1alpha1.ConnectedCluster) error {
 	var lease *coordinationv1.Lease
 
 	if kbc.Status.LocalClusterUID == "" {
@@ -277,7 +277,7 @@ func (r *KbindClusterReconciler) reconcileStatus(ctx context.Context, c client.C
 
 // findLeaseByConnection returns the first Lease in the kbind namespace whose
 // core.kbind.io/connection annotation matches kbcName, or nil if none exists.
-func (r *KbindClusterReconciler) findLeaseByConnection(ctx context.Context, c client.Client, kbcName string) (*coordinationv1.Lease, error) {
+func (r *ConnectedClusterReconciler) findLeaseByConnection(ctx context.Context, c client.Client, kbcName string) (*coordinationv1.Lease, error) {
 	var list coordinationv1.LeaseList
 	if err := c.List(ctx, &list,
 		client.InNamespace(leaseNamespace),
@@ -301,7 +301,7 @@ func isLeaseConnected(lease *coordinationv1.Lease) bool {
 	return time.Now().Before(deadline)
 }
 
-func setCondition(kbc *kbpv1alpha1.KbindCluster, condType string, status metav1.ConditionStatus, reason, msg string) {
+func setCondition(kbc *kbpv1alpha1.ConnectedCluster, condType string, status metav1.ConditionStatus, reason, msg string) {
 	apimeta.SetStatusCondition(&kbc.Status.Conditions, metav1.Condition{
 		Type:               condType,
 		Status:             status,
@@ -313,7 +313,7 @@ func setCondition(kbc *kbpv1alpha1.KbindCluster, condType string, status metav1.
 
 // statusEqual compares the reconciler-managed status fields, ignoring condition
 // timestamps so a no-op reconcile does not trigger a spurious status update.
-func statusEqual(origLocalUID string, origLeaseRef *kbpv1alpha1.LocalLeaseRef, origConds []metav1.Condition, origLastHeartbeat *metav1.Time, cur kbpv1alpha1.KbindClusterStatus) bool {
+func statusEqual(origLocalUID string, origLeaseRef *kbpv1alpha1.LocalLeaseRef, origConds []metav1.Condition, origLastHeartbeat *metav1.Time, cur kbpv1alpha1.ConnectedClusterStatus) bool {
 	if origLocalUID != cur.LocalClusterUID {
 		return false
 	}

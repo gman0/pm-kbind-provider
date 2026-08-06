@@ -29,7 +29,7 @@ interface APIBindingListResponse {
   };
 }
 
-export interface KbindClusterCondition {
+export interface ConnectedClusterCondition {
   type: string;
   status: string;
   reason: string;
@@ -37,21 +37,21 @@ export interface KbindClusterCondition {
   lastTransitionTime?: string;
 }
 
-export interface KbindCluster {
+export interface ConnectedCluster {
   metadata: { name: string; creationTimestamp?: string };
   spec?: { bundleAPIs?: { all?: boolean; apis?: Array<{ name: string }> } };
   status?: {
     localClusterUID?: string;
     lastHeartbeatTime?: string;
-    conditions?: KbindClusterCondition[];
+    conditions?: ConnectedClusterCondition[];
   };
 }
 
-interface KbindClusterListResponse {
-  kube_bind_provider_platform_mesh_io: {
+interface ConnectedClusterListResponse {
+  kbind_provider_platform_mesh_io: {
     v1alpha1: {
-      KbindClusters: {
-        items: KbindCluster[];
+      ConnectedClusters: {
+        items: ConnectedCluster[];
       };
     };
   };
@@ -85,10 +85,10 @@ const LIST_API_BINDINGS_QUERY = `
 `;
 
 const LIST_KBIND_CLUSTERS_QUERY = `
-  query ListKbindClusters {
-    kube_bind_provider_platform_mesh_io {
+  query ListConnectedClusters {
+    kbind_provider_platform_mesh_io {
       v1alpha1 {
-        KbindClusters {
+        ConnectedClusters {
           items {
             metadata { name creationTimestamp }
             spec { bundleAPIs { all apis { name } } }
@@ -105,16 +105,16 @@ const LIST_KBIND_CLUSTERS_QUERY = `
 `;
 
 const APPLY_KBIND_CLUSTER_MUTATION = `
-  mutation ApplyKbindCluster($yaml: String!) {
+  mutation ApplyConnectedCluster($yaml: String!) {
     applyYaml(yaml: $yaml)
   }
 `;
 
 const DELETE_KBIND_CLUSTER_MUTATION = `
-  mutation DeleteKbindCluster($name: String!) {
-    kube_bind_provider_platform_mesh_io {
+  mutation DeleteConnectedCluster($name: String!) {
+    kbind_provider_platform_mesh_io {
       v1alpha1 {
-        deleteKbindCluster(name: $name)
+        deleteConnectedCluster(name: $name)
       }
     }
   }
@@ -129,13 +129,13 @@ interface GraphQLConfig {
 export class BindingsService {
   private luigiContextService = inject(LuigiContextService);
 
-  private buildKbindClusterYAML(name: string, apis: Array<{ name: string }>): string {
+  private buildConnectedClusterYAML(name: string, apis: Array<{ name: string }>): string {
     const specLines = apis.length === 0
       ? ['spec:', '  bundleAPIs:', '    all: true']
       : ['spec:', '  bundleAPIs:', '    apis:', ...apis.map(a => `      - name: ${a.name}`)];
     return [
-      'apiVersion: kube-bind-provider.platform-mesh.io/v1alpha1',
-      'kind: KbindCluster',
+      'apiVersion: kbind-provider.platform-mesh.io/v1alpha1',
+      'kind: ConnectedCluster',
       'metadata:',
       `  name: ${name}`,
       ...specLines,
@@ -205,7 +205,7 @@ export class BindingsService {
     );
   }
 
-  listKbindClusters(): Observable<KbindCluster[]> {
+  listConnectedClusters(): Observable<ConnectedCluster[]> {
     return this.getGraphQLConfig().pipe(
       switchMap(({ endpoint, token }) =>
         from(
@@ -216,20 +216,20 @@ export class BindingsService {
           }).then((res) => res.json())
         )
       ),
-      map((response: { data: KbindClusterListResponse }) =>
-        response.data?.kube_bind_provider_platform_mesh_io?.v1alpha1?.KbindClusters?.items || []
+      map((response: { data: ConnectedClusterListResponse }) =>
+        response.data?.kbind_provider_platform_mesh_io?.v1alpha1?.ConnectedClusters?.items || []
       ),
       catchError((error) => {
-        console.error('Error fetching KbindClusters:', error);
+        console.error('Error fetching ConnectedClusters:', error);
         return of([]);
       })
     );
   }
 
-  createKbindCluster(cluster: KbindCluster): Observable<KbindCluster | null> {
+  createConnectedCluster(cluster: ConnectedCluster): Observable<ConnectedCluster | null> {
     return this.getGraphQLConfig().pipe(
       switchMap(({ endpoint, token }) => {
-        const yaml = this.buildKbindClusterYAML(cluster.metadata.name, cluster.spec?.bundleAPIs?.apis ?? []);
+        const yaml = this.buildConnectedClusterYAML(cluster.metadata.name, cluster.spec?.bundleAPIs?.apis ?? []);
         return from(
           fetch(endpoint, {
             method: 'POST',
@@ -243,16 +243,16 @@ export class BindingsService {
         return response.data?.applyYaml ?? null;
       }),
       catchError((error) => {
-        console.error('Error creating KbindCluster:', error);
+        console.error('Error creating ConnectedCluster:', error);
         return of(null);
       })
     );
   }
 
-  patchKbindClusterSpec(name: string, apis: Array<{ name: string }>): Observable<KbindCluster | null> {
+  patchConnectedClusterSpec(name: string, apis: Array<{ name: string }>): Observable<ConnectedCluster | null> {
     return this.getGraphQLConfig().pipe(
       switchMap(({ endpoint, token }) => {
-        const yaml = this.buildKbindClusterYAML(name, apis);
+        const yaml = this.buildConnectedClusterYAML(name, apis);
         return from(
           fetch(endpoint, {
             method: 'POST',
@@ -266,13 +266,13 @@ export class BindingsService {
         return response.data?.applyYaml ?? null;
       }),
       catchError((error) => {
-        console.error('Error patching KbindCluster:', error);
+        console.error('Error patching ConnectedCluster:', error);
         return of(null);
       })
     );
   }
 
-  deleteKbindCluster(name: string): Observable<boolean> {
+  deleteConnectedCluster(name: string): Observable<boolean> {
     return this.getGraphQLConfig().pipe(
       switchMap(({ endpoint, token }) =>
         from(
@@ -285,10 +285,10 @@ export class BindingsService {
       ),
       map((response: any) => {
         if (response.errors?.length) throw new Error(response.errors[0].message);
-        return response.data?.kube_bind_provider_platform_mesh_io?.v1alpha1?.deleteKbindCluster === true;
+        return response.data?.kbind_provider_platform_mesh_io?.v1alpha1?.deleteConnectedCluster === true;
       }),
       catchError((error) => {
-        console.error('Error deleting KbindCluster:', error);
+        console.error('Error deleting ConnectedCluster:', error);
         return of(false);
       })
     );

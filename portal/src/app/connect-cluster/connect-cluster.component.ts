@@ -25,7 +25,7 @@ import '@ui5/webcomponents-icons/dist/slim-arrow-down.js';
 import '@ui5/webcomponents-icons/dist/slim-arrow-right.js';
 import '@ui5/webcomponents-icons/dist/warning.js';
 
-import { BindingsService, KbindCluster } from '../bindings/bindings.service';
+import { BindingsService, ConnectedCluster } from '../bindings/bindings.service';
 
 const SYSTEM_GROUP_SUFFIXES = ['.kcp.io', '.platform-mesh.io'];
 
@@ -66,7 +66,7 @@ export class ConnectClusterComponent implements OnInit {
 
   loading = signal(true);
   credentialsReady = signal(false);
-  kbindClusters = signal<KbindCluster[]>([]);
+  connectedClusters = signal<ConnectedCluster[]>([]);
   private allResourcePairs = signal<{ group: string; resource: string }[]>([]);
   private kubeconfig = signal<string | null>(null);
   availableAPIs = computed(() => {
@@ -86,7 +86,7 @@ export class ConnectClusterComponent implements OnInit {
 
   bundleNameValid = computed(() => K8S_NAME_RE.test(this.bundleName().trim()));
   bundleNameTaken = computed(() =>
-    this.kbindClusters().some(c => c.metadata.name === this.bundleName().trim())
+    this.connectedClusters().some(c => c.metadata.name === this.bundleName().trim())
   );
 
   canGenerate = computed(
@@ -107,7 +107,7 @@ export class ConnectClusterComponent implements OnInit {
 
   // ── edit dialog state ────────────────────────────────────────────────────────
 
-  editingCluster = signal<KbindCluster | null>(null);
+  editingCluster = signal<ConnectedCluster | null>(null);
   editSelectedAPIs = signal<Set<string>>(new Set());
   editOriginalAPIs = signal<Set<string>>(new Set());
   editHideSystemAPIs = signal(true);
@@ -156,7 +156,7 @@ export class ConnectClusterComponent implements OnInit {
     forkJoin({
       apis: this.bindingsService.listAPIBindings(),
       secret: this.bindingsService.getSecret('kbind-kubeconfig', 'kbind'),
-      clusters: this.bindingsService.listKbindClusters(),
+      clusters: this.bindingsService.listConnectedClusters(),
     }).subscribe({
       next: ({ apis, secret, clusters }) => {
         const allPairs: { group: string; resource: string }[] = [];
@@ -181,7 +181,7 @@ export class ConnectClusterComponent implements OnInit {
           this.credentialsReady.set(false);
         }
 
-        this.kbindClusters.set(clusters);
+        this.connectedClusters.set(clusters);
         this.loading.set(false);
         LuigiClient.uxManager().hideLoadingIndicator();
       },
@@ -229,7 +229,7 @@ export class ConnectClusterComponent implements OnInit {
 
     this.creating.set(true);
     const apiRefs = autoBind ? [] : apis.map(a => ({ name: a }));
-    this.bindingsService.createKbindCluster({
+    this.bindingsService.createConnectedCluster({
       metadata: { name },
       spec: { bundleAPIs: autoBind ? { all: true } : { apis: apiRefs } },
     }).subscribe({
@@ -240,7 +240,7 @@ export class ConnectClusterComponent implements OnInit {
       },
       error: () => {
         this.creating.set(false);
-        LuigiClient.uxManager().showAlert({ text: 'Failed to create KbindCluster', type: 'error', closeAfter: 4000 });
+        LuigiClient.uxManager().showAlert({ text: 'Failed to create ConnectedCluster', type: 'error', closeAfter: 4000 });
       },
     });
   }
@@ -277,7 +277,7 @@ export class ConnectClusterComponent implements OnInit {
 
   // ── edit dialog ───────────────────────────────────────────────────────────────
 
-  openEditDialog(cluster: KbindCluster): void {
+  openEditDialog(cluster: ConnectedCluster): void {
     this.editingCluster.set(cluster);
     const preSelected = new Set<string>((cluster.spec?.bundleAPIs?.apis ?? []).map(a => a.name));
     this.editSelectedAPIs.set(preSelected);
@@ -333,7 +333,7 @@ export class ConnectClusterComponent implements OnInit {
     if (!cluster || !this.canSaveEdit()) return;
     const apis = [...this.editSelectedAPIs()].sort().map(a => ({ name: a }));
     this.saving.set(true);
-    this.bindingsService.patchKbindClusterSpec(cluster.metadata.name, apis).subscribe({
+    this.bindingsService.patchConnectedClusterSpec(cluster.metadata.name, apis).subscribe({
       next: () => {
         this.saving.set(false);
         this.closeEditDialog();
@@ -341,7 +341,7 @@ export class ConnectClusterComponent implements OnInit {
       },
       error: () => {
         this.saving.set(false);
-        LuigiClient.uxManager().showAlert({ text: 'Failed to update KbindCluster', type: 'error', closeAfter: 4000 });
+        LuigiClient.uxManager().showAlert({ text: 'Failed to update ConnectedCluster', type: 'error', closeAfter: 4000 });
       },
     });
   }
@@ -362,7 +362,7 @@ export class ConnectClusterComponent implements OnInit {
     const name = this.deletingClusterName();
     if (!name) return;
     this.deleting.set(true);
-    this.bindingsService.deleteKbindCluster(name).subscribe({
+    this.bindingsService.deleteConnectedCluster(name).subscribe({
       next: () => {
         this.deleting.set(false);
         this.closeDeleteDialog();
@@ -370,32 +370,32 @@ export class ConnectClusterComponent implements OnInit {
       },
       error: () => {
         this.deleting.set(false);
-        LuigiClient.uxManager().showAlert({ text: 'Failed to delete KbindCluster', type: 'error', closeAfter: 4000 });
+        LuigiClient.uxManager().showAlert({ text: 'Failed to delete ConnectedCluster', type: 'error', closeAfter: 4000 });
       },
     });
   }
 
   // ── status display helpers ───────────────────────────────────────────────────
 
-  getConnectedCondition(cluster: KbindCluster) {
+  getConnectedCondition(cluster: ConnectedCluster) {
     return cluster.status?.conditions?.find(c => c.type === 'Connected');
   }
 
-  getStatusLabel(cluster: KbindCluster): string {
+  getStatusLabel(cluster: ConnectedCluster): string {
     const cond = this.getConnectedCondition(cluster);
     if (!cond) return 'Pending';
     if (cond.status === 'True') return 'Established';
     return cond.reason === 'LeaseNotFound' ? 'Not connected' : 'Stale';
   }
 
-  getStatusClass(cluster: KbindCluster): string {
+  getStatusClass(cluster: ConnectedCluster): string {
     const cond = this.getConnectedCondition(cluster);
     if (!cond) return 'status-unknown';
     if (cond.status === 'True') return 'status-connected';
     return cond.reason === 'LeaseNotFound' ? 'status-unknown' : 'status-stale';
   }
 
-  getLastHeartbeat(cluster: KbindCluster): string | null {
+  getLastHeartbeat(cluster: ConnectedCluster): string | null {
     const t = cluster.status?.lastHeartbeatTime;
     return t ? this.formatRelativeTime(t) : null;
   }
@@ -411,7 +411,7 @@ export class ConnectClusterComponent implements OnInit {
     return `${Math.floor(h / 24)}d ago`;
   }
 
-  getAPISummary(cluster: KbindCluster): string {
+  getAPISummary(cluster: ConnectedCluster): string {
     if (cluster.spec?.bundleAPIs?.all) return 'All APIs';
     const apis = cluster.spec?.bundleAPIs?.apis;
     if (!apis || apis.length === 0) return 'All APIs';
